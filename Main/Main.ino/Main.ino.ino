@@ -528,9 +528,9 @@ String CommandString = "";
 void SerialParser(void) 
 {
   //  One command per line.  
-  //  Command Format: "up to 18 Letter command <\n>"
+  //  Command Format: "up to 18 Letter command <\0>"
   //  count will  be below Zero on a timeout.
-  //  read up to X chars or until EOT - in this case "\n" 
+  //  read up to X chars or until EOT - in this case "\0" 
   ByteCount = -1;
   ByteCount =  Serial.readBytesUntil('\0',Buffer,bSize);  
   if (ByteCount  > 0) strcpy(Command,strtok(Buffer,"\0"));   
@@ -610,7 +610,6 @@ void setup()
   //Wire.write(CMPS11_Byte4);                //Send command
   //Wire.endTransmission();
   //delay(20);
-
 }
 
 // Loop
@@ -695,7 +694,7 @@ void loop()
   angle16 = angle16 % 3600;
   if ((angle16 >= 3595) || (angle16 <= 5)) angle16 = 0;               // Hysteresis +- 0.5 degree arount 0 degrees
   
-  // calculate sliding intermediate value over the last 10 values
+                                                                      // calculate sliding intermediate value over the last 10 values
   for (i = 9; i > 0; i --) {
     angleVectorList[i][0] = angleVectorList[i - 1][0];                // shift register right
     angleVectorList[i][1] = angleVectorList[1 - 1][1];
@@ -720,8 +719,8 @@ void loop()
   
   // Read distances to obstructions
   // *************************************************************************************************************************************
-  digitalWrite(distanceLeftTrig, LOW);
-  delayMicroseconds(5);
+  digitalWrite(distanceLeftTrig, LOW);                                // Left
+  delayMicroseconds(5);                                               // ****
   digitalWrite(distanceLeftTrig, HIGH);
   delayMicroseconds(10);
   digitalWrite(distanceLeftTrig, LOW);
@@ -731,8 +730,8 @@ void loop()
   }
   distanceLeftObstruction = (distanceLeftCm < distanceLeftLimit);     // Obstruction detected left side
 
-  digitalWrite(distanceRightTrig, LOW);
-  delayMicroseconds(5);
+  digitalWrite(distanceRightTrig, LOW);                               // Right
+  delayMicroseconds(5);                                               // *****
   digitalWrite(distanceRightTrig, HIGH);
   delayMicroseconds(10);
   digitalWrite(distanceRightTrig, LOW);
@@ -742,8 +741,8 @@ void loop()
   }
   distanceRightObstruction = (distanceRightCm < distanceRightLimit);  // Obstruction detected right side
 
-  digitalWrite(distanceFrontTrig, LOW);
-  delayMicroseconds(5);
+  digitalWrite(distanceFrontTrig, LOW);                               // Front
+  delayMicroseconds(5);                                               // *****
   digitalWrite(distanceFrontTrig, HIGH);
   delayMicroseconds(10);
   digitalWrite(distanceFrontTrig, LOW);
@@ -751,11 +750,10 @@ void loop()
   if (distanceFrontPulseTime > 60) {                                  // disturbance filter
     distanceFrontCm = distanceFrontPulseTime / 29 / 2;
   }
-
   distanceFrontObstruction = (distanceFrontCm < distanceFrontLimit);  // Obstruction detected front side
 
-  digitalWrite(distanceUpTrig, LOW);
-  delayMicroseconds(5);
+  digitalWrite(distanceUpTrig, LOW);                                  // Up
+  delayMicroseconds(5);                                               // **
   digitalWrite(distanceUpTrig, HIGH);
   delayMicroseconds(10);
   digitalWrite(distanceUpTrig, LOW);
@@ -763,11 +761,10 @@ void loop()
   if (distanceUpPulseTime > 60) {                                     // disturbance filter
     distanceUpCm = distanceUpPulseTime / 29 / 2;
   }
-
   distanceUpDoor = (distanceUpCm < distanceUpLimit);                  // Door passing
 
-  digitalWrite(distanceDownTrig, LOW);
-  delayMicroseconds(5);
+  digitalWrite(distanceDownTrig, LOW);                                // Down
+  delayMicroseconds(5);                                               // ****
   digitalWrite(distanceDownTrig, HIGH);
   delayMicroseconds(10);
   digitalWrite(distanceDownTrig, LOW);
@@ -775,12 +772,11 @@ void loop()
   if (distanceDownPulseTime > 60) {                                   // disturbance filter
     distanceDownCm = distanceDownPulseTime / 29 / 2;
   }
-
   distanceDownObstruction = (distanceDownCm > distanceDownLimit);     // Obstruction like down stair detected
 
-  // Build and execute emergency stop
-  // *************************************************************************************************************************************
-
+//  // Build and execute emergency stop
+//  // *************************************************************************************************************************************
+//
 //  if (emergencyStop == false) {                                       // keep emergency stop stored until manually reset
 //    emergencyStop =  battery9VLow || battery7VLow || battery5VLow  || battery5VArduinoLow
 //                     || distanceRightObstruction  || distanceLeftObstruction  || distanceFrontObstruction  || distanceDownObstruction
@@ -792,8 +788,8 @@ void loop()
   // Read encoders
   // *************************************************************************************************************************************
   encLt += QuadratureEncoderReadLt(); // calculation of intermediate value (Lt, Rt) and driving distance to be done at Raspberry pi 2
-  encRt += QuadratureEncoderReadRt(); // Driving distance depends on wheels diameter
-
+  encRt += QuadratureEncoderReadRt(); 
+  
   // Motor control
   // *************************************************************************************************************************************
 
@@ -920,11 +916,6 @@ void loop()
   Serial.print("DownObstruction: ");
   Serial.println(distanceDownObstruction);
   
-  Serial.print("StartAngle: ");
-  Serial.println(catchStartAngle);
-  Serial.print("Angle16: ");
-  Serial.println(catchAngle16);
-  
   Serial.print("TurnedAngle: ");
   Serial.println(turnedAngle);
   Serial.print("TurnFinished: ");
@@ -983,9 +974,10 @@ void loop()
                                                      forwardSlowCommand = false; forwardHalfCommand = false; forwardFullCommand = false;
                                                      steeringLeftCommand = false; steeringRightCommand = false; 
     }
-    if (CommandString.startsWith("WlanReady")) wlanReady = true;                    // Supervision of W-LAN communication
+    if (CommandString.startsWith("WlanReady")) wlanReady = true;                    // Live beat of W-LAN communication
     if (CommandString.startsWith("EncoderReset")) {encLt = 0; encRt = 0;}           // Encoder reset
   } 
+  
   // Supervision of Communication
   // *************************************************************************************************************************************
 

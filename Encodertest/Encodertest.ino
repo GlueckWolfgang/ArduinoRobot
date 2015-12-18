@@ -41,8 +41,8 @@ boolean motor4Stall = false;
 boolean emergencyStop = false;
 boolean forward             = 0;
 boolean backward            = 1;
-unsigned int startAngle = 0;
-unsigned int turnedAngle = 0;
+int startAngle = 0;
+int turnedAngle = 0;
 boolean forwardStopCommand  = false; // Stop command
 boolean forwardSlowCommand  = false; // Forward slow command
 boolean forwardHalfCommand  = false; // Forward half command
@@ -207,9 +207,9 @@ String CommandString = "";
 void SerialParser(void) 
 {
   //  One command per line.  
-  //  Command Format: "up to 18 Letter command <\n>"
+  //  Command Format: "up to 18 Letter command <\0>"
   //  count will  be below Zero on a timeout.
-  //  read up to X chars or until EOT - in this case "\n" 
+  //  read up to X chars or until EOT - in this case "\0" 
   ByteCount = -1;
   ByteCount =  Serial.readBytesUntil('\0',Buffer,bSize);  
   if (ByteCount  > 0) strcpy(Command,strtok(Buffer,"\0"));   
