@@ -808,131 +808,137 @@ void loop()
   Serial.print("EncRt: ");
   Serial.println(encRt, DEC);
 
-  Serial.print("Battery9V: ");
+  Serial.print("Battery 9V: ");
   Serial.println(battery9VFinalValue);
-  Serial.print("Battery9VLL: ");
+  Serial.print("Battery 9V: LL ");
   Serial.println(battery9VLowerLimit);
-  Serial.print("Battery9VLow: ");
+  Serial.print("Battery 9V: LL below: ");
   Serial.println(battery9VLow);
   
-  Serial.print("Battery7V: ");
+  Serial.print("Battery 7V: ");
   Serial.println(battery7VFinalValue);
-  Serial.print("Battery7VLL: ");
+  Serial.print("Battery 7V: LL ");
   Serial.println(battery7VLowerLimit);
-  Serial.print("Battery7VLow: ");
+  Serial.print("Battery 7V: LL below ");
   Serial.println(battery7VLow);
 
-  Serial.print("Battery5V: ");
+  Serial.print("Battery 5V: ");
   Serial.println(battery5VFinalValue);
-  Serial.print("Battery5VLL: ");
+  Serial.print("Battery 5V: LL ");
   Serial.println(battery5VLowerLimit);
-  Serial.print("Battery5VLow: ");
+  Serial.print("Battery 5V: LL below ");
   Serial.println(battery5VLow);
 
-  Serial.print("Arduino5V: ");
+  Serial.print("Arduino 5V: ");
   Serial.println(battery5VArduinoFinalValue);
-  Serial.print("Arduino5VLL: ");
+  Serial.print("Arduino 5V: LL ");
   Serial.println(battery5VArduinoLowerLimit);
-  Serial.print("Battery5VArduinoLow: ");
+  Serial.print("Arduino 5V: LL below ");
   Serial.println(battery5VArduinoLow);
   
-  Serial.print("MotorCurrentUL: ");
+  Serial.print("Motor1 current: UL ");
   Serial.println(motorStallLimit);
-  
-  Serial.print("Motor1Current: ");
+  Serial.print("Motor1 current: ");
   Serial.println (motor1FinalValue);
-  Serial.print("Motor1Stall: ");
+  Serial.print("Motor1 current: Stall");
   Serial.println(motor1Stall);
-  
-  Serial.print("Motor2Current: ");
+
+  Serial.print("Motor2 current: UL ");
+  Serial.println(motorStallLimit);
+  Serial.print("Motor2 current: ");
   Serial.println(motor2FinalValue);
-  Serial.print("Motor2Stall: ");
+  Serial.print("Motor2 current: Stall ");
   Serial.println(motor2Stall);
 
-  Serial.print("Motor3Current: ");
+  Serial.print("Motor3 current: UL ");
+  Serial.println(motorStallLimit);
+  Serial.print("Motor3 current: ");
   Serial.println(motor3FinalValue);
-  Serial.print("Motor3Stall: ");
+  Serial.print("Motor3 current: Stall ");
   Serial.println(motor3Stall);
 
-  Serial.print("Motor4Current: ");
+  Serial.print("Motor4 current: UL ");
+  Serial.println(motorStallLimit);
+  Serial.print("Motor4 current: ");
   Serial.println(motor4FinalValue);
-  Serial.print("Motor4Stall: ");
+  Serial.print("Motor4 current: Stall: ");
   Serial.println(motor4Stall);
 
   Serial.print("Roll: ");
   Serial.println(roll, DEC);
-  Serial.print("RollUL: ");
+  Serial.print("Roll: UL ");
   Serial.println(rollLimit, DEC);
-  Serial.print("RollLimitExceeded: ");
+  Serial.print("Roll: UL Exceeded: ");
   Serial.println(rollLimitExceeded);
 
   Serial.print("Pitch: ");
   Serial.println(pitch, DEC);
-  Serial.print("PitchUL: ");
+  Serial.print("Pitch: UL ");
   Serial.println(pitchLimit, DEC);
-  Serial.print("PitchLimitExceeded: ");
+  Serial.print("Pitch: UL Exceeded ");
   Serial.println(pitchLimitExceeded);
 
-  Serial.print("ActualAngle: ");
+  Serial.print("Actual angle: ");
   Serial.print(angle16 / 10, DEC);
   Serial.print(".");
   Serial.println(angle16 %10, DEC);
   
-  Serial.print("IntermediateAngle: ");
+  Serial.print("Smoothed angle: ");
   Serial.print(intermediateAngle / 10, DEC);
   Serial.print(".");
   Serial.println(intermediateAngle % 10, DEC);
 
-  Serial.print("DistanceLeft: ");
+  Serial.print("Distance fleft: ");
   Serial.println(distanceLeftCm);
-  Serial.print("DistanceLeftLL: ");
+  Serial.print("Distance fleft: LL ");
   Serial.println(distanceLeftLimit);
-  Serial.print("LeftObstruction: ");
+  Serial.print("Distance fleft: Obstruction ");
   Serial.println(distanceLeftObstruction);
 
-  Serial.print("DistanceRight: ");
+  Serial.print("Distance fright: ");
   Serial.println(distanceRightCm);
-  Serial.print("DistanceRightLL: ");
+  Serial.print("Distance fright: LL ");
   Serial.println(distanceRightLimit);
-  Serial.print("RightObstruction: ");
+  Serial.print("Distance fright: Obstruction ");
   Serial.println(distanceRightObstruction);
 
-  Serial.print("DistanceFront: ");
+  Serial.print("Distance front: ");
   Serial.println(distanceFrontCm);
-  Serial.print("DistanceFrontLL ");
+  Serial.print("Distance front: LL ");
   Serial.println(distanceFrontLimit);
-  Serial.print("FrontObstruction: ");
+  Serial.print("Distance front: Obstruction ");
   Serial.println(distanceFrontObstruction);
 
-  Serial.print("DistanceUp: ");
+  Serial.print("Distance up: ");
   Serial.println(distanceUpCm);
-  Serial.print("DistanceUpLL: ");
+  Serial.print("Distance up: LL ");
   Serial.println(distanceUpLimit);
 
-  Serial.print("DistanceDown: ");
+  Serial.print("Distance down: ");
   Serial.println(distanceDownCm);
-  Serial.print("DistanceDownUL: ");
+  Serial.print("Distance down: UL ");
   Serial.println(distanceDownLimit);
-  Serial.print("DownObstruction: ");
+  Serial.print("Distance down: Obstruction ");
   Serial.println(distanceDownObstruction);
   
-  Serial.print("TurnedAngle: ");
+  Serial.print("Turned angle: ");
   Serial.println(turnedAngle);
-  Serial.print("TurnFinished: ");
+  
+  Serial.print("Turn finished: ");
   Serial.println(turnFinished);
-  if (wlanDisturbance)           Serial.println("WLANDisturbance!");
-  if (usbDisturbance)            Serial.println("USBDisturbance!");
-  if (emergencyStop)             Serial.println("EmergencyStop!");
+  if (wlanDisturbance)           Serial.println("W-LAN disturbance!");
+  if (usbDisturbance)            Serial.println("USB disturbance!");
+  if (emergencyStop)             Serial.println("Emergency stop!");
   if (forwardStopCommand)        Serial.println("Stop!");
-  if (forwardSlowCommand)        Serial.println("ForwardSlow!"); 
-  if (forwardHalfCommand)        Serial.println("ForwardHalf!");
-  if (forwardFullCommand)        Serial.println("ForwardFull!");
-  if (steeringLeftCommand)       Serial.println("SteeringLeft!");
-  if (steeringRightCommand)      Serial.println("SteeringRight!");
-  if (turnSlow45LeftCommand)     Serial.println("TurnSlow45Left!");
-  if (turnSlow45RightCommand)    Serial.println("TurnSlow45Right!");
-  if (turnSlow90LeftCommand)     Serial.println("TurnSlow90Left!");
-  if (turnSlow90RightCommand)    Serial.println("TurnSlow90Right!");
+  if (forwardSlowCommand)        Serial.println("Forward slow!"); 
+  if (forwardHalfCommand)        Serial.println("Forward half!");
+  if (forwardFullCommand)        Serial.println("Forward full!");
+  if (steeringLeftCommand)       Serial.println("Steering left!");
+  if (steeringRightCommand)      Serial.println("Steering right!");
+  if (turnSlow45LeftCommand)     Serial.println("Turn slow 45 left!");
+  if (turnSlow45RightCommand)    Serial.println("Turn slow 45 right!");
+  if (turnSlow90LeftCommand)     Serial.println("Turn slow 90 left!");
+  if (turnSlow90RightCommand)    Serial.println("Turn slow 90 right!");
 
   // Get command from USB interface
   // *************************************************************************************************************************************
