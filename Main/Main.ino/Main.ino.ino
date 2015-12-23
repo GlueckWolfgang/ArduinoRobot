@@ -106,11 +106,11 @@ float battery5VFinalValue = 0.0;
 float battery5VLowerLimit = 4.5;
 boolean battery5VLow = false;
 
-#define battery5VArduinoProbe A3     // supervision of Arduino 5 V
-int battery5VArduinoRawValue = 0;
-float battery5VArduinoFinalValue = 0.0;
-float battery5VArduinoLowerLimit = 4.5;
-boolean battery5VArduinoLow = false;
+#define Arduino5VProbe A3     // supervision of Arduino 5 V
+int Arduino5VRawValue = 0;
+float Arduino5VFinalValue = 0.0;
+float Arduino5VLowerLimit = 4.5;
+boolean Arduino5VLow = false;
 
 // Motors
 // *******************************************************************************************************************************
@@ -634,7 +634,7 @@ void loop()
   battery9VRawValue = analogRead(battery9VProbe);
   battery7VRawValue = analogRead(battery7VProbe);
   battery5VRawValue = analogRead(battery5VProbe);
-  battery5VArduinoRawValue = analogRead(battery5VArduinoProbe);
+  Arduino5VRawValue = analogRead(Arduino5VProbe);
 
   battery9VFinalValue = battery9VRawValue * 10.0 / 1023.0;
   battery9VLow = (battery9VFinalValue < battery9VLowerLimit);
@@ -646,8 +646,8 @@ void loop()
   battery5VFinalValue = battery5VRawValue * 5.0 / 1023.0;
   battery5VLow = (battery5VFinalValue < battery5VLowerLimit);
 
-  battery5VArduinoFinalValue = battery5VArduinoRawValue * 5.0 / 1023.0;
-  battery5VArduinoLow = (battery5VArduinoFinalValue < battery5VArduinoLowerLimit);
+  Arduino5VFinalValue = Arduino5VRawValue * 5.0 / 1023.0;
+  Arduino5VLow = (Arduino5VFinalValue < Arduino5VLowerLimit);
 
   // Read motor current probe and check limit
   // ************************************************************************************************************************************
@@ -791,10 +791,11 @@ void loop()
   // *************************************************************************************************************************************
 
   if (emergencyStop == false) {                                       // keep emergency stop stored until manually reset
-    emergencyStop =  battery9VLow || battery7VLow || battery5VLow  || battery5VArduinoLow
+    emergencyStop =  battery9VLow || battery7VLow || battery5VLow  || Arduino5VLow
                      || distanceRightObstruction  || distanceLeftObstruction  || distanceFrontObstruction  || distanceDownObstruction
-                     || motor1Stall  || motor2Stall  || motor3Stall  || motor4Stall  || pitchLimitExceeded  || rollLimitExceeded;
- //                    || usbDisturbance || wlanDisturbance;
+                     || motor1Stall  || motor2Stall  || motor3Stall  || motor4Stall  || pitchLimitExceeded  || rollLimitExceeded
+                     || usbDisturbance;
+//                     || wlanDisturbance;
   }
 
 
@@ -843,11 +844,11 @@ void loop()
   Serial.println(battery5VLow);
 
   Serial.print("Arduino 5V: ");
-  Serial.println(battery5VArduinoFinalValue);
+  Serial.println(Arduino5VFinalValue);
   Serial.print("Arduino 5V: LL ");
-  Serial.println(battery5VArduinoLowerLimit);
+  Serial.println(Arduino5VLowerLimit);
   Serial.print("Arduino 5V: LL below ");
-  Serial.println(battery5VArduinoLow);
+  Serial.println(Arduino5VLow);
 
   Serial.print("Motor1 current: UL ");
   Serial.println(motorStallLimit);
