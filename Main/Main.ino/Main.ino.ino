@@ -550,8 +550,8 @@ void setup()
 {
   Serial.begin(38400);
   Serial.setTimeout(10);
+  
   pinMode(ledPin, OUTPUT);
-
   pinMode(distanceRightTrig, OUTPUT);
   pinMode(distanceLeftTrig, OUTPUT);
   pinMode(distanceFrontTrig, OUTPUT);
@@ -570,6 +570,7 @@ void setup()
   // CMPS11 startup
   // ************************************************************************************************************
   digitalWrite(CMPS11_VCC, 1);
+  // Wait for CMPS has been restarted
   delay(2000);
   Wire.begin();
 
@@ -789,13 +790,13 @@ void loop()
   // Build and execute emergency stop
   // *************************************************************************************************************************************
 
-//  if (emergencyStop == false) {                                       // keep emergency stop stored until manually reset
-//    emergencyStop =  battery9VLow || battery7VLow || battery5VLow  || Arduino5VLow
+  if (emergencyStop == false) {                                       // keep emergency stop stored until manually reset
+    emergencyStop =  battery9VLow || battery7VLow || battery5VLow  || Arduino5VLow
 //                     || distanceRightObstruction  || distanceLeftObstruction  || distanceFrontObstruction  || distanceDownObstruction
-//                     || motor1Stall  || motor2Stall  || motor3Stall  || motor4Stall  || pitchLimitExceeded  || rollLimitExceeded
-//                     || usbDisturbance;
+                     || motor1Stall  || motor2Stall  || motor3Stall  || motor4Stall  || pitchLimitExceeded  || rollLimitExceeded
+                     || usbDisturbance;
 //                     || wlanDisturbance;
-//  }
+  }
 
 
   // Read encoders
@@ -808,234 +809,238 @@ void loop()
 
   MotorControl();
 
-
-  // Send values to USB interface
+  // check serial interface
   // *************************************************************************************************************************************
+  if (Serial) { usbDisturbance = false;                                            // USB ok
 
-  Serial.print ("MV@Version: V ");
-  Serial.println(ARDUINO);
-
-  Serial.print("MV@EncLt: V ");
-  Serial.println(encLt, DEC);
-  Serial.print("MV@EncRt: V ");
-  Serial.println(encRt, DEC);
-
-  Serial.print("MV@Battery 9V: V ");
-  Serial.println(battery9VFinalValue);
-  Serial.print("MV@Battery 9V: LL ");
-  Serial.println(battery9VLowerLimit);
-  Serial.print("MV@Battery 9V: LL_Exceeded: ");
-  Serial.println(battery9VLow);
-
-  Serial.print("MV@Battery 7V: V ");
-  Serial.println(battery7VFinalValue);
-  Serial.print("MV@Battery 7V: LL ");
-  Serial.println(battery7VLowerLimit);
-  Serial.print("MV@Battery 7V: LL_Exceeded ");
-  Serial.println(battery7VLow);
-
-  Serial.print("MV@Battery 5V: V ");
-  Serial.println(battery5VFinalValue);
-  Serial.print("MV@Battery 5V: LL ");
-  Serial.println(battery5VLowerLimit);
-  Serial.print("MV@Battery 5V: LL_Exceeded ");
-  Serial.println(battery5VLow);
-
-  Serial.print("MV@Arduino 5V: V ");
-  Serial.println(Arduino5VFinalValue);
-  Serial.print("MV@Arduino 5V: LL ");
-  Serial.println(Arduino5VLowerLimit);
-  Serial.print("MV@Arduino 5V: LL_Exceeded ");
-  Serial.println(Arduino5VLow);
-
-  Serial.print("MV@Motor1 current: UL ");
-  Serial.println(motorStallLimit);
-  Serial.print("MV@Motor1 current: V ");
-  Serial.println (motor1FinalValue);
-  Serial.print("MV@Motor1 current: UL_Exceeded");
-  Serial.println(motor1Stall);
-
-  Serial.print("MV@Motor2 current: UL ");
-  Serial.println(motorStallLimit);
-  Serial.print("MV@Motor2 current: V ");
-  Serial.println(motor2FinalValue);
-  Serial.print("MV@Motor2 current: UL_Exceeded ");
-  Serial.println(motor2Stall);
-
-  Serial.print("MV@Motor3 current: UL ");
-  Serial.println(motorStallLimit);
-  Serial.print("MV@Motor3 current: V ");
-  Serial.println(motor3FinalValue);
-  Serial.print("MV@Motor3 current: UL_Exceeded ");
-  Serial.println(motor3Stall);
-
-  Serial.print("MV@Motor4 current: UL ");
-  Serial.println(motorStallLimit);
-  Serial.print("MV@Motor4 current: V ");
-  Serial.println(motor4FinalValue);
-  Serial.print("MV@Motor4 current: UL_Exceeded ");
-  Serial.println(motor4Stall);
-
-  Serial.print("MV@Roll: V ");
-  Serial.println(roll, DEC);
-  Serial.print("MV@Roll: UL ");
-  Serial.println(rollLimit, DEC);
-  Serial.print("MV@Roll: UL_Exceeded ");
-  Serial.println(rollLimitExceeded);
-
-  Serial.print("MV@Pitch: V ");
-  Serial.println(pitch, DEC);
-  Serial.print("MV@Pitch: UL ");
-  Serial.println(pitchLimit, DEC);
-  Serial.print("MV@Pitch: UL_Exceeded ");
-  Serial.println(pitchLimitExceeded);
-
-  Serial.print("MV@Actual angle: V ");
-  Serial.print(angle16 / 10, DEC);
-  Serial.print(".");
-  Serial.println(angle16 % 10, DEC);
-
-  Serial.print("MV@Smoothed angle: V ");
-  Serial.print(intermediateAngle / 10, DEC);
-  Serial.print(".");
-  Serial.println(intermediateAngle % 10, DEC);
-
-  Serial.print("MV@Distance fleft: V ");
-  Serial.println(distanceLeftCm);
-  Serial.print("MV@Distance fleft: LL ");
-  Serial.println(distanceLeftLimit);
-  Serial.print("MV@Distance fleft: LL_Exceeded ");
-  Serial.println(distanceLeftObstruction);
-
-  Serial.print("MV@Distance fright: V ");
-  Serial.println(distanceRightCm);
-  Serial.print("MV@Distance fright: LL ");
-  Serial.println(distanceRightLimit);
-  Serial.print("MV@Distance fright: LL_Exceeded ");
-  Serial.println(distanceRightObstruction);
-
-  Serial.print("MV@Distance front: V ");
-  Serial.println(distanceFrontCm);
-  Serial.print("MV@Distance front: LL ");
-  Serial.println(distanceFrontLimit);
-  Serial.print("MV@Distance front: LL_Exceeded ");
-  Serial.println(distanceFrontObstruction);
-
-  Serial.print("MV@Distance up: V ");
-  Serial.println(distanceUpCm);
-  Serial.print("MV@Distance up: LL ");
-  Serial.println(distanceUpLimit);
-
-  // Serial.print("MV@Distance down raw value: "); // For test reasons only
-  // Serial.println(distanceDownRawValue);      // For test reasons only
-  // Serial.print("MV@Distance down pulse time: ");// For test reasons only
-  // Serial.println(distanceDownPulseTime);     // For test reasons only
-  Serial.print("MV@Distance down: V ");
-  Serial.println(distanceDownCm);
-  Serial.print("MV@Distance down: UL ");
-  Serial.println(distanceDownLimit);
-  Serial.print("MV@Distance down: UL_Exceeded ");
-  Serial.println(distanceDownObstruction);
-
-  Serial.print("MV@Turned angle: V ");
-  Serial.println(turnedAngle);
-
-  Serial.print("S@Turn finished: ");
-  Serial.println(turnFinished);
-  Serial.print("S@Stop: ");
-  Serial.println(forwardStopCommand);
-  // if (wlanDisturbance)           Serial.println("S@W-LAN disturbance: 1"); // For test reasons only Raspbery supervises the interface too
-  // if (usbDisturbance)            Serial.println("S@USB disturbance: 1");   // For test reasons only Raspbery supervises the interface too
-  Serial.print("S@Emergency stop: ");
-  Serial.println(emergencyStop);
-  Serial.print("S@Forward slow: ");
-  Serial.println(forwardSlowCommand);
-  Serial.print("S@Forward half: ");
-  Serial.println(forwardHalfCommand);
-  Serial.print("S@Forward full: ");
-  Serial.println(forwardFullCommand);
-  Serial.print("S@Steering left: ");
-  Serial.println(steeringLeftCommand);
-  Serial.print("S@Steering right: ");
-  Serial.println(steeringRightCommand);
-  Serial.print("S@Turn slow 45 left: ");
-  Serial.println(turnSlow45LeftCommand);
-  Serial.print("S@Turn slow 45 right: ");
-  Serial.println(turnSlow45RightCommand);
-  Serial.print("S@Turn slow 90 left: ");
-  Serial.println(turnSlow90LeftCommand);
-  Serial.print("S@Turn slow 90 right: ");
-  Serial.println(turnSlow90RightCommand);
-
-  // Get command from USB interface
-  // *************************************************************************************************************************************
-
-  SerialParser();
-  if (ByteCount  > 0) {
-    CommandString = Command;
-    // It is allowed to change between driving commands directly, no need for a stop command between other driving commands
-
-    if (CommandString.startsWith("Stop")) forwardStopCommand = true;
-    if (CommandString.startsWith("ForwardSlow")) {
-      forwardStopCommand = false; forwardSlowCommand = true; forwardHalfCommand = false; forwardFullCommand = false;
-      turnSlow45LeftCommand = false; turnSlow45RightCommand = false;
-      turnSlow90LeftCommand = false; turnSlow90RightCommand = false; turnFinished = true;
-    }
-    if (CommandString.startsWith("ForwardHalf")) {
-      forwardStopCommand = false; forwardHalfCommand = true; forwardSlowCommand = false; forwardFullCommand = false;
-      turnSlow45LeftCommand = false; turnSlow45RightCommand = false;
-      turnSlow90LeftCommand = false; turnSlow90RightCommand = false; turnFinished = true;
-    }
-    if (CommandString.startsWith("ForwardFull")) {
-      forwardStopCommand = false; forwardFullCommand = true; forwardSlowCommand = false; forwardHalfCommand = false;
-      turnSlow45LeftCommand = false; turnSlow45RightCommand = false;
-      turnSlow90LeftCommand = false; turnSlow90RightCommand = false; turnFinished = true;
-    }
-    if (CommandString.startsWith("SteeringLeft"))  {
-      steeringLeftCommand = true;
-      steeringRightCommand = false;
-    }
-    if (CommandString.startsWith("SteeringRight")) {
-      steeringLeftCommand = false;
-      steeringRightCommand = true;
-    }
-    if (CommandString.startsWith("SteeringAhead")) {
-      steeringLeftCommand = false;
-      steeringRightCommand = false;
-    }
-    if (CommandString.startsWith("TurnSlow45Left")) {
-      turnSlow45LeftCommand = true;
-      forwardStopCommand = false; forwardSlowCommand = false; forwardHalfCommand = false; forwardFullCommand = false;
-      steeringLeftCommand = false; steeringRightCommand = false;
-    }
-
-    if (CommandString.startsWith("TurnSlow45Right")) {
-      turnSlow45RightCommand = true;
-      forwardStopCommand = false; forwardSlowCommand = false; forwardHalfCommand = false; forwardFullCommand = false;
-      steeringLeftCommand = false; steeringRightCommand = false;
-    }
-    if (CommandString.startsWith("TurnSlow90Left")) {
-      turnSlow90LeftCommand = true;
-      forwardStopCommand = false; forwardSlowCommand = false; forwardHalfCommand = false; forwardFullCommand = false;
-      steeringLeftCommand = false; steeringRightCommand = false;
-    }
-    if (CommandString.startsWith("TurnSlow90Right")) {
-      turnSlow90RightCommand = true;
-      forwardStopCommand = false; forwardSlowCommand = false; forwardHalfCommand = false; forwardFullCommand = false;
-      steeringLeftCommand = false; steeringRightCommand = false;
-    }
-    if (CommandString.startsWith("WlanReady")) wlanReady = true;                    // Live beat of W-LAN communication
-    if (CommandString.startsWith("EncoderReset")) {
-      encLt = 0;  // Encoder reset
-      encRt = 0;
+    // Send values to USB interface
+    // *************************************************************************************************************************************
+  
+    Serial.print ("MV@Version: V ");
+    Serial.println(ARDUINO);
+  
+    Serial.print("MV@EncLt: V ");
+    Serial.println(encLt, DEC);
+    Serial.print("MV@EncRt: V ");
+    Serial.println(encRt, DEC);
+  
+    Serial.print("MV@Battery 9V: V ");
+    Serial.println(battery9VFinalValue);
+    Serial.print("MV@Battery 9V: LL ");
+    Serial.println(battery9VLowerLimit);
+    Serial.print("MV@Battery 9V: LL_Exceeded: ");
+    Serial.println(battery9VLow);
+  
+    Serial.print("MV@Battery 7V: V ");
+    Serial.println(battery7VFinalValue);
+    Serial.print("MV@Battery 7V: LL ");
+    Serial.println(battery7VLowerLimit);
+    Serial.print("MV@Battery 7V: LL_Exceeded ");
+    Serial.println(battery7VLow);
+  
+    Serial.print("MV@Battery 5V: V ");
+    Serial.println(battery5VFinalValue);
+    Serial.print("MV@Battery 5V: LL ");
+    Serial.println(battery5VLowerLimit);
+    Serial.print("MV@Battery 5V: LL_Exceeded ");
+    Serial.println(battery5VLow);
+  
+    Serial.print("MV@Arduino 5V: V ");
+    Serial.println(Arduino5VFinalValue);
+    Serial.print("MV@Arduino 5V: LL ");
+    Serial.println(Arduino5VLowerLimit);
+    Serial.print("MV@Arduino 5V: LL_Exceeded ");
+    Serial.println(Arduino5VLow);
+  
+    Serial.print("MV@Motor1 current: UL ");
+    Serial.println(motorStallLimit);
+    Serial.print("MV@Motor1 current: V ");
+    Serial.println (motor1FinalValue);
+    Serial.print("MV@Motor1 current: UL_Exceeded");
+    Serial.println(motor1Stall);
+  
+    Serial.print("MV@Motor2 current: UL ");
+    Serial.println(motorStallLimit);
+    Serial.print("MV@Motor2 current: V ");
+    Serial.println(motor2FinalValue);
+    Serial.print("MV@Motor2 current: UL_Exceeded ");
+    Serial.println(motor2Stall);
+  
+    Serial.print("MV@Motor3 current: UL ");
+    Serial.println(motorStallLimit);
+    Serial.print("MV@Motor3 current: V ");
+    Serial.println(motor3FinalValue);
+    Serial.print("MV@Motor3 current: UL_Exceeded ");
+    Serial.println(motor3Stall);
+  
+    Serial.print("MV@Motor4 current: UL ");
+    Serial.println(motorStallLimit);
+    Serial.print("MV@Motor4 current: V ");
+    Serial.println(motor4FinalValue);
+    Serial.print("MV@Motor4 current: UL_Exceeded ");
+    Serial.println(motor4Stall);
+  
+    Serial.print("MV@Roll: V ");
+    Serial.println(roll, DEC);
+    Serial.print("MV@Roll: UL ");
+    Serial.println(rollLimit, DEC);
+    Serial.print("MV@Roll: UL_Exceeded ");
+    Serial.println(rollLimitExceeded);
+  
+    Serial.print("MV@Pitch: V ");
+    Serial.println(pitch, DEC);
+    Serial.print("MV@Pitch: UL ");
+    Serial.println(pitchLimit, DEC);
+    Serial.print("MV@Pitch: UL_Exceeded ");
+    Serial.println(pitchLimitExceeded);
+  
+    Serial.print("MV@Actual angle: V ");
+    Serial.print(angle16 / 10, DEC);
+    Serial.print(".");
+    Serial.println(angle16 % 10, DEC);
+  
+    Serial.print("MV@Smoothed angle: V ");
+    Serial.print(intermediateAngle / 10, DEC);
+    Serial.print(".");
+    Serial.println(intermediateAngle % 10, DEC);
+  
+    Serial.print("MV@Distance fleft: V ");
+    Serial.println(distanceLeftCm);
+    Serial.print("MV@Distance fleft: LL ");
+    Serial.println(distanceLeftLimit);
+    Serial.print("MV@Distance fleft: LL_Exceeded ");
+    Serial.println(distanceLeftObstruction);
+  
+    Serial.print("MV@Distance fright: V ");
+    Serial.println(distanceRightCm);
+    Serial.print("MV@Distance fright: LL ");
+    Serial.println(distanceRightLimit);
+    Serial.print("MV@Distance fright: LL_Exceeded ");
+    Serial.println(distanceRightObstruction);
+  
+    Serial.print("MV@Distance front: V ");
+    Serial.println(distanceFrontCm);
+    Serial.print("MV@Distance front: LL ");
+    Serial.println(distanceFrontLimit);
+    Serial.print("MV@Distance front: LL_Exceeded ");
+    Serial.println(distanceFrontObstruction);
+  
+    Serial.print("MV@Distance up: V ");
+    Serial.println(distanceUpCm);
+    Serial.print("MV@Distance up: LL ");
+    Serial.println(distanceUpLimit);
+  
+    // Serial.print("MV@Distance down raw value: "); // For test reasons only
+    // Serial.println(distanceDownRawValue);      // For test reasons only
+    // Serial.print("MV@Distance down pulse time: ");// For test reasons only
+    // Serial.println(distanceDownPulseTime);     // For test reasons only
+    Serial.print("MV@Distance down: V ");
+    Serial.println(distanceDownCm);
+    Serial.print("MV@Distance down: UL ");
+    Serial.println(distanceDownLimit);
+    Serial.print("MV@Distance down: UL_Exceeded ");
+    Serial.println(distanceDownObstruction);
+  
+    Serial.print("MV@Turned angle: V ");
+    Serial.println(turnedAngle);
+  
+    Serial.print("S@Turn finished: ");
+    Serial.println(turnFinished);
+    Serial.print("S@Stop: ");
+    Serial.println(forwardStopCommand);
+    // if (wlanDisturbance)           Serial.println("S@W-LAN disturbance: 1"); // For test reasons only Raspbery supervises the interface too
+    // if (usbDisturbance)            Serial.println("S@USB disturbance: 1");   // For test reasons only Raspbery supervises the interface too
+    Serial.print("S@Emergency stop: ");
+    Serial.println(emergencyStop);
+    Serial.print("S@Forward slow: ");
+    Serial.println(forwardSlowCommand);
+    Serial.print("S@Forward half: ");
+    Serial.println(forwardHalfCommand);
+    Serial.print("S@Forward full: ");
+    Serial.println(forwardFullCommand);
+    Serial.print("S@Steering left: ");
+    Serial.println(steeringLeftCommand);
+    Serial.print("S@Steering right: ");
+    Serial.println(steeringRightCommand);
+    Serial.print("S@Turn slow 45 left: ");
+    Serial.println(turnSlow45LeftCommand);
+    Serial.print("S@Turn slow 45 right: ");
+    Serial.println(turnSlow45RightCommand);
+    Serial.print("S@Turn slow 90 left: ");
+    Serial.println(turnSlow90LeftCommand);
+    Serial.print("S@Turn slow 90 right: ");
+    Serial.println(turnSlow90RightCommand);
+  
+    // Get command from USB interface
+    // *************************************************************************************************************************************
+  
+    SerialParser();
+    if (ByteCount  > 0) {
+      CommandString = Command;
+      // It is allowed to change between driving commands directly, no need for a stop command between driving commands
+  
+      if (CommandString.startsWith("Stop")) forwardStopCommand = true;
+      if (CommandString.startsWith("ForwardSlow")) {
+        forwardStopCommand = false; forwardSlowCommand = true; forwardHalfCommand = false; forwardFullCommand = false;
+        turnSlow45LeftCommand = false; turnSlow45RightCommand = false;
+        turnSlow90LeftCommand = false; turnSlow90RightCommand = false; turnFinished = true;
+      }
+      if (CommandString.startsWith("ForwardHalf")) {
+        forwardStopCommand = false; forwardHalfCommand = true; forwardSlowCommand = false; forwardFullCommand = false;
+        turnSlow45LeftCommand = false; turnSlow45RightCommand = false;
+        turnSlow90LeftCommand = false; turnSlow90RightCommand = false; turnFinished = true;
+      }
+      if (CommandString.startsWith("ForwardFull")) {
+        forwardStopCommand = false; forwardFullCommand = true; forwardSlowCommand = false; forwardHalfCommand = false;
+        turnSlow45LeftCommand = false; turnSlow45RightCommand = false;
+        turnSlow90LeftCommand = false; turnSlow90RightCommand = false; turnFinished = true;
+      }
+      if (CommandString.startsWith("SteeringLeft"))  {
+        steeringLeftCommand = true;
+        steeringRightCommand = false;
+      }
+      if (CommandString.startsWith("SteeringRight")) {
+        steeringLeftCommand = false;
+        steeringRightCommand = true;
+      }
+      if (CommandString.startsWith("SteeringAhead")) {
+        steeringLeftCommand = false;
+        steeringRightCommand = false;
+      }
+      if (CommandString.startsWith("TurnSlow45Left")) {
+        turnSlow45LeftCommand = true;
+        forwardStopCommand = false; forwardSlowCommand = false; forwardHalfCommand = false; forwardFullCommand = false;
+        steeringLeftCommand = false; steeringRightCommand = false;
+      }
+  
+      if (CommandString.startsWith("TurnSlow45Right")) {
+        turnSlow45RightCommand = true;
+        forwardStopCommand = false; forwardSlowCommand = false; forwardHalfCommand = false; forwardFullCommand = false;
+        steeringLeftCommand = false; steeringRightCommand = false;
+      }
+      if (CommandString.startsWith("TurnSlow90Left")) {
+        turnSlow90LeftCommand = true;
+        forwardStopCommand = false; forwardSlowCommand = false; forwardHalfCommand = false; forwardFullCommand = false;
+        steeringLeftCommand = false; steeringRightCommand = false;
+      }
+      if (CommandString.startsWith("TurnSlow90Right")) {
+        turnSlow90RightCommand = true;
+        forwardStopCommand = false; forwardSlowCommand = false; forwardHalfCommand = false; forwardFullCommand = false;
+        steeringLeftCommand = false; steeringRightCommand = false;
+      }
+      if (CommandString.startsWith("WlanReady")) wlanReady = true;                    // Live beat of W-LAN communication
+      if (CommandString.startsWith("EncoderReset")) {
+        encLt = 0;  // Encoder reset
+        encRt = 0;
+      }
     }
   }
+  else {usbDisturbance = true;                                                        // USB disturbance
+  Serial.flush();
+  }
 
-  // Supervision of Communication
+  // Supervision of W-LAN Communication
   // *************************************************************************************************************************************
-
-  if (Serial) usbDisturbance = false;                                             // USB ok
-  else usbDisturbance = true;                                                     // USB Disturbance
 
   if (wlanReady == false) wlanReadyCount += 1;                                    // no wlanReady received since last cykle
   else {
