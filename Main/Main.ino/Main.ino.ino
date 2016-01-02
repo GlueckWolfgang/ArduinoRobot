@@ -1,6 +1,6 @@
 // ****************************************************************************************************************************************************
 // *** Arduino robot program
-// *** Version: 2015.12_29
+// *** Version: 2016.01.01
 // *** Developer: Wolfgang Glück
 // ***
 // *** Supported hardware:
@@ -43,7 +43,6 @@
 // ***          or any motor stall or pitch or roll exceeds a limit or communication to USB is down or W-Lan is down
 // *************************************************************************************************************************
 
-
 // Definitions
 // *************************************************************************************************************************
 // *************************************************************************************************************************
@@ -70,11 +69,15 @@ float vectorLength = 0.0;
 float cosinus = 0.0;
 float angle = 0.0;
 
-#define pitchLimit 30        // + - limit in degrees
-#define rollLimit 20         // + - limit in degrees
-boolean pitchLimitExceeded = false;
-boolean rollLimitExceeded = false;
-int check;
+#define UpitchLimit 30        // + - limit in degrees
+#define LpitchLimit -30
+#define UrollLimit 20         // + - limit in degrees
+#define LrollLimit -20
+boolean UpitchLimitExceeded = false;
+boolean LpitchLimitExceeded = false;
+boolean UrollLimitExceeded = false;
+boolean LrollLimitExceeded = false;
+
 int i;
 
 // LED, communication status
@@ -686,13 +689,10 @@ void loop()
   low_byte = Wire.read();
   pitch = Wire.read();
   roll = Wire.read();
-  check = pitch;
-  if (check < 0) check = check * -1;         // make a positive value for checking + - limit
-  pitchLimitExceeded = (check > pitchLimit); // checking pitch limit
-  check = roll;
-  if (check < 0) check = check * -1;         // make a positive value for checking + - limit
-  rollLimitExceeded = (check > rollLimit);   // checking roll limit
-
+  UpitchLimitExceeded = (pitch > UpitchLimit); // checking pitch limit
+  LpitchLimitExceeded = (pitch < LpitchLimit); // checking pitch limit
+  UrollLimitExceeded = (roll > UrollLimit);    // checking roll limit
+  LrollLimitExceeded = (roll < LrollLimit);    // checking roll limit
   angle16 = high_byte;                       // Calculate 16 bit angle
   angle16 <<= 8;
   angle16 += low_byte;
@@ -792,8 +792,9 @@ void loop()
 
   if (emergencyStop == false) {                                       // keep emergency stop stored until manually reset
     emergencyStop =  battery9VLow || battery7VLow || battery5VLow  || Arduino5VLow
-//                     || distanceRightObstruction  || distanceLeftObstruction  || distanceFrontObstruction  || distanceDownObstruction
-                     || motor1Stall  || motor2Stall  || motor3Stall  || motor4Stall  || pitchLimitExceeded  || rollLimitExceeded
+                     || distanceRightObstruction  || distanceLeftObstruction  || distanceFrontObstruction  || distanceDownObstruction
+                     || motor1Stall  || motor2Stall  || motor3Stall  || motor4Stall  
+                     || UpitchLimitExceeded  || LpitchLimitExceeded || UrollLimitExceeded  || LrollLimitExceeded
                      || usbDisturbance;
 //                     || wlanDisturbance;
   }
@@ -883,16 +884,24 @@ void loop()
     Serial.print("MV@Roll: V ");
     Serial.println(roll, DEC);
     Serial.print("MV@Roll: UL ");
-    Serial.println(rollLimit, DEC);
+    Serial.println(UrollLimit, DEC);
     Serial.print("MV@Roll: UL_Exceeded ");
-    Serial.println(rollLimitExceeded);
+    Serial.println(UrollLimitExceeded);
+    Serial.print("MV@Roll: LL ");
+    Serial.println(LrollLimit, DEC);
+    Serial.print("MV@Roll: LL_Exceeded ");
+    Serial.println(LrollLimitExceeded);
   
     Serial.print("MV@Pitch: V ");
     Serial.println(pitch, DEC);
     Serial.print("MV@Pitch: UL ");
-    Serial.println(pitchLimit, DEC);
+    Serial.println(UpitchLimit, DEC);
     Serial.print("MV@Pitch: UL_Exceeded ");
-    Serial.println(pitchLimitExceeded);
+    Serial.println(UpitchLimitExceeded);
+    Serial.print("MV@Pitch: LL ");
+    Serial.println(LpitchLimit, DEC);
+    Serial.print("MV@Pitch: LL_Exceeded ");
+    Serial.println(LpitchLimitExceeded);
   
     Serial.print("MV@Actual angle: V ");
     Serial.print(angle16 / 10, DEC);
@@ -931,9 +940,9 @@ void loop()
     Serial.println(distanceUpLimit);
   
     // Serial.print("MV@Distance down raw value: "); // For test reasons only
-    // Serial.println(distanceDownRawValue);      // For test reasons only
+    // Serial.println(distanceDownRawValue);         // For test reasons only
     // Serial.print("MV@Distance down pulse time: ");// For test reasons only
-    // Serial.println(distanceDownPulseTime);     // For test reasons only
+    // Serial.println(distanceDownPulseTime);        // For test reasons only
     Serial.print("MV@Distance down: V ");
     Serial.println(distanceDownCm);
     Serial.print("MV@Distance down: UL ");
@@ -1036,7 +1045,10 @@ void loop()
     }
   }
   else {usbDisturbance = true;                                                        // USB disturbance
-  Serial.flush();
+  Serial.end();
+  Serial.begin(38400);
+  Serial.setTimeout(10);
+  delay(1000);                                                                          // wait for next trial
   }
 
   // Supervision of W-LAN Communication
