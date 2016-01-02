@@ -829,7 +829,7 @@ void loop()
     Serial.println(battery9VFinalValue);
     Serial.print("MV@Battery 9V: LL ");
     Serial.println(battery9VLowerLimit);
-    Serial.print("MV@Battery 9V: LL_Exceeded: ");
+    Serial.print("MV@Battery 9V: LL_Exceeded ");
     Serial.println(battery9VLow);
   
     Serial.print("MV@Battery 7V: V ");
@@ -857,7 +857,7 @@ void loop()
     Serial.println(motorStallLimit);
     Serial.print("MV@Motor1 current: V ");
     Serial.println (motor1FinalValue);
-    Serial.print("MV@Motor1 current: UL_Exceeded");
+    Serial.print("MV@Motor1 current: UL_Exceeded ");
     Serial.println(motor1Stall);
   
     Serial.print("MV@Motor2 current: UL ");
@@ -979,6 +979,9 @@ void loop()
     Serial.println(turnSlow90LeftCommand);
     Serial.print("S@Turn slow 90 right: ");
     Serial.println(turnSlow90RightCommand);
+    
+    // wait for transmission has been done
+    Serial.flush();
   
     // Get command from USB interface
     // *************************************************************************************************************************************
@@ -1048,7 +1051,7 @@ void loop()
   Serial.end();
   Serial.begin(38400);
   Serial.setTimeout(10);
-  delay(1000);                                                                          // wait for next trial
+  delay(1000);                                                                        // wait for next trial
   }
 
   // Supervision of W-LAN Communication
