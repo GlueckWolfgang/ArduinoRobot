@@ -80,7 +80,7 @@ boolean LrollLimitExceeded = false;
 
 // Amplifier
 // *************************************************************************************************************************
-#define amplifireVCC 23       // VCC switch for amplifire
+#define amplifierVCC 23       // VCC switch for amplifire
 
 // Communication
 // *************************************************************************************************************************
@@ -574,6 +574,7 @@ void setup()
   pinMode(motor3PWM, OUTPUT);
   pinMode(motor4PWM, OUTPUT);
   pinMode(CMPS11_VCC, OUTPUT);
+  pinMode(amplifierVCC, OUTPUT);
 
   // CMPS11 startup
   // ************************************************************************************************************
@@ -1053,8 +1054,8 @@ void loop()
         encRt = 0;
       }
       if (CommandString.startsWith("Amplifier: ")){                                   // Amplifier 0/1
-        if (CommandString.substring(11) == "0") digitalWrite(amplifireVCC, 0);
-        else digitalWrite(amplifireVCC, 1);
+        if (CommandString.substring(11) == "0") digitalWrite(amplifierVCC, 0);
+        else digitalWrite(amplifierVCC, 1);
       }
     }
   }
