@@ -880,7 +880,9 @@ void loop()
     Serial.println(motor4FinalValue);
     Serial.print("MV@Motor4 current: UL_Exceeded ");
     Serial.println(motor4Stall);
-  
+
+    Serial.print("Compass: ");
+    Serial.println(CMPS11_VCC);
     Serial.print("MV@Roll: V ");
     Serial.println(roll, DEC);
     Serial.print("MV@Roll: UL ");
