@@ -1,6 +1,6 @@
 // ****************************************************************************************************************************************************
 // *** Arduino robot program
-// *** Version: 2016.01.01
+// *** Version: 2016.01.04
 // *** Developer: Wolfgang Glück
 // ***
 // *** Supported hardware:
@@ -78,12 +78,12 @@ boolean LpitchLimitExceeded = false;
 boolean UrollLimitExceeded = false;
 boolean LrollLimitExceeded = false;
 
-int i;
-
-// LED, communication status
+// Amplifier
 // *************************************************************************************************************************
-#define ledPin 13                 // LED for heart beat
+#define amplifireVCC 23       // VCC switch for amplifire
 
+// Communication
+// *************************************************************************************************************************
 boolean wlanDisturbance = false;  // if WLAN is not ready for more than 3 cycles
 int wlanReadyCount = 0;
 boolean wlanReady = false;        // will be set by command from USB interface and reset by Arduino
@@ -545,6 +545,11 @@ void SerialParser(void)
   memset(Buffer, 0, sizeof(Buffer));   // Clear contents of Buffer
   Serial.flush();
 }
+
+// Others
+// *************************************************************************************************************************
+int i;
+#define ledPin 13                 // LED for heart beat
 
 //  Setup
 // ***********************************************************************************************************************
@@ -1046,6 +1051,10 @@ void loop()
       if (CommandString.startsWith("EncoderReset")) {
         encLt = 0;  // Encoder reset
         encRt = 0;
+      }
+      if (CommandString.startsWith("Amplifier: ")){                                   // Amplifier 0/1
+        if (CommandString.substring(11) == "0") digitalWrite(amplifireVCC, 0);
+        else digitalWrite(amplifireVCC, 1);
       }
     }
   }
