@@ -10,7 +10,7 @@
 // ***   - Motor control Board (MCB) for 2 motors and encoders      (optional)
 // ***   - Arduino mega (Spider)
 // ***   - CMPS11                                                   (via 10cm I2C bus, using internal pullups by default)
-// ***   - 5 x US-015
+// ***   - 7 x US-015
 // ***   - 1 x IR Sensor (Sharp)
 // ***   - 7,2 V Battery for MCB and drives                         (6x 1,2 V NiMH Akku type D 10'000 mAh, same battery pack as for 9,6 V)
 // ***   - 9,6 V Battery for Arduino and MCB                        (8x 1,2 V NiMH Akku type D 10'000 mAh)
@@ -35,6 +35,7 @@
 // ***   - (ok) Get and execute driving commands via USB interface (transition beween driving commands directly is allowed)
 // ***          (Stop, ForwardSlow, ForwardHalf, ForwardFull, SteeringAhead, SteeringLeft, SteeringRight in combination with Forward Commands)
 // ***          (TurnSlow45Left, TurnSlow45Right, TurnSlow90Left, TurnSlow90Right)
+// ***   - (ok) get switch on/off command for audio amplifier
 // ***   - (ok) Get reset command for encoder values
 // ***   - (ok) Get status about W-LAN from USB interface
 // ***   - (ok) Supervise communication status to USB interface
@@ -80,7 +81,7 @@ boolean LrollLimitExceeded = false;
 
 // Amplifier
 // *************************************************************************************************************************
-#define amplifierVCC 23       // VCC switch for amplifire
+#define amplifier_VCC 23       // VCC switch for amplifire
 
 // Communication
 // *************************************************************************************************************************
@@ -482,19 +483,34 @@ int16_t QuadratureEncoderReadRt( void ) // read single step encoders
 
 // US sensors
 // ***************************************************************************************************************
-#define distanceRightEcho 36
-#define distanceRightTrig 37
-#define distanceRightLimit 40
-int distanceRightPulseTime = 0;
-int distanceRightCm = 0;
-boolean distanceRightObstruction = false;
+#define distancefRightEcho 36
+#define distancefRightTrig 37
+#define distancefRightLimit 40
+int distancefRightPulseTime = 0;
+int distancefRightCm = 0;
+boolean distancefRightObstruction = false;
 
-#define distanceLeftEcho 42
-#define distanceLeftTrig 43
-#define distanceLeftLimit 40
-int distanceLeftPulseTime = 0;
-int distanceLeftCm = 0;
-boolean distanceLeftObstruction = false;
+#define distancefLeftEcho 42
+#define distancefLeftTrig 43
+#define distancefLeftLimit 40
+int distancefLeftPulseTime = 0;
+int distancefLeftCm = 0;
+boolean distancefLeftObstruction = false;
+
+#define distancebRightEcho 48
+#define distancebRightTrig 49
+#define distancebRightLimit 40
+int distancebRightPulseTime = 0;
+int distancebRightCm = 0;
+boolean distancebRightObstruction = false;
+
+#define distancebLeftEcho 50
+#define distancebLeftTrig 51
+#define distancebLeftLimit 40
+int distancebLeftPulseTime = 0;
+int distancebLeftCm = 0;
+boolean distancebLeftObstruction = false;
+
 
 #define distanceFrontEcho 38
 #define distanceFrontTrig 39
@@ -560,8 +576,10 @@ void setup()
   Serial.setTimeout(10);
   
   pinMode(ledPin, OUTPUT);
-  pinMode(distanceRightTrig, OUTPUT);
-  pinMode(distanceLeftTrig, OUTPUT);
+  pinMode(distancefRightTrig, OUTPUT);
+  pinMode(distancefLeftTrig, OUTPUT);
+  pinMode(distancebLeftTrig, OUTPUT);
+  pinMode(distancebRightTrig, OUTPUT);
   pinMode(distanceFrontTrig, OUTPUT);
   pinMode(distanceDownTrig, OUTPUT);
   pinMode(distanceUpTrig, OUTPUT);
@@ -574,7 +592,7 @@ void setup()
   pinMode(motor3PWM, OUTPUT);
   pinMode(motor4PWM, OUTPUT);
   pinMode(CMPS11_VCC, OUTPUT);
-  pinMode(amplifierVCC, OUTPUT);
+  pinMode(amplifier_VCC, OUTPUT);
 
   // CMPS11 startup
   // ************************************************************************************************************
@@ -731,27 +749,49 @@ void loop()
 
   // Read distances to obstructions
   // *************************************************************************************************************************************
-  digitalWrite(distanceLeftTrig, LOW);                                // Left
+  digitalWrite(distancefLeftTrig, LOW);                               // front Left
   delayMicroseconds(5);                                               // ****
-  digitalWrite(distanceLeftTrig, HIGH);
+  digitalWrite(distancefLeftTrig, HIGH);
   delayMicroseconds(10);
-  digitalWrite(distanceLeftTrig, LOW);
-  distanceLeftPulseTime = pulseIn(distanceLeftEcho, HIGH);
-  if (distanceLeftPulseTime > 60) {                                   // disturbance filter
-    distanceLeftCm = distanceLeftPulseTime / 29 / 2;
+  digitalWrite(distancefLeftTrig, LOW);
+  distancefLeftPulseTime = pulseIn(distancefLeftEcho, HIGH);
+  if (distancefLeftPulseTime > 60) {                                  // disturbance filter
+    distancefLeftCm = distancefLeftPulseTime / 29 / 2;
   }
-  distanceLeftObstruction = (distanceLeftCm < distanceLeftLimit);     // Obstruction detected left side
+  distancefLeftObstruction = (distancefLeftCm < distancefLeftLimit);  // Obstruction detected front left
 
-  digitalWrite(distanceRightTrig, LOW);                               // Right
+  digitalWrite(distancefRightTrig, LOW);                              // front Right
   delayMicroseconds(5);                                               // *****
-  digitalWrite(distanceRightTrig, HIGH);
+  digitalWrite(distancefRightTrig, HIGH);
   delayMicroseconds(10);
-  digitalWrite(distanceRightTrig, LOW);
-  distanceRightPulseTime = pulseIn(distanceRightEcho, HIGH);
-  if (distanceRightPulseTime > 60) {                                  // disturbance filter
-    distanceRightCm = distanceRightPulseTime / 29 / 2;
+  digitalWrite(distancefRightTrig, LOW);
+  distancefRightPulseTime = pulseIn(distancefRightEcho, HIGH);
+  if (distancefRightPulseTime > 60) {                                  // disturbance filter
+    distancefRightCm = distancefRightPulseTime / 29 / 2;
   }
-  distanceRightObstruction = (distanceRightCm < distanceRightLimit);  // Obstruction detected right side
+  distancefRightObstruction = (distancefRightCm < distancefRightLimit);// Obstruction detected front right
+
+  digitalWrite(distancebLeftTrig, LOW);                               // back Left
+  delayMicroseconds(5);                                               // ****
+  digitalWrite(distancebLeftTrig, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(distancebLeftTrig, LOW);
+  distancebLeftPulseTime = pulseIn(distancebLeftEcho, HIGH);
+  if (distancebLeftPulseTime > 60) {                                  // disturbance filter
+    distancebLeftCm = distancebLeftPulseTime / 29 / 2;
+  }
+  distancebLeftObstruction = (distancebLeftCm < distancebLeftLimit);  // Obstruction detected back left
+
+  digitalWrite(distancebRightTrig, LOW);                              // back Right
+  delayMicroseconds(5);                                               // *****
+  digitalWrite(distancebRightTrig, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(distancebRightTrig, LOW);
+  distancebRightPulseTime = pulseIn(distancebRightEcho, HIGH);
+  if (distancebRightPulseTime > 60) {                                  // disturbance filter
+    distancebRightCm = distancebRightPulseTime / 29 / 2;
+  }
+  distancebRightObstruction = (distancebRightCm < distancebRightLimit);// Obstruction detected back right
 
   digitalWrite(distanceFrontTrig, LOW);                               // Front
   delayMicroseconds(5);                                               // *****
@@ -798,7 +838,7 @@ void loop()
 
   if (emergencyStop == false) {                                       // keep emergency stop stored until manually reset
     emergencyStop =  battery9VLow || battery7VLow || battery5VLow  || Arduino5VLow
-                     || distanceRightObstruction  || distanceLeftObstruction  || distanceFrontObstruction  || distanceDownObstruction
+                     || distancefRightObstruction  || distancefLeftObstruction  || distanceFrontObstruction  || distanceDownObstruction
                      || motor1Stall  || motor2Stall  || motor3Stall  || motor4Stall  
                      || UpitchLimitExceeded  || LpitchLimitExceeded || UrollLimitExceeded  || LrollLimitExceeded
                      || usbDisturbance;
@@ -922,18 +962,32 @@ void loop()
     Serial.println(intermediateAngle % 10, DEC);
   
     Serial.print("MV@Distance fleft: V ");
-    Serial.println(distanceLeftCm);
+    Serial.println(distancefLeftCm);
     Serial.print("MV@Distance fleft: LL ");
-    Serial.println(distanceLeftLimit);
+    Serial.println(distancefLeftLimit);
     Serial.print("MV@Distance fleft: LL_Exceeded ");
-    Serial.println(distanceLeftObstruction);
+    Serial.println(distancefLeftObstruction);
   
     Serial.print("MV@Distance fright: V ");
-    Serial.println(distanceRightCm);
+    Serial.println(distancefRightCm);
     Serial.print("MV@Distance fright: LL ");
-    Serial.println(distanceRightLimit);
+    Serial.println(distancefRightLimit);
     Serial.print("MV@Distance fright: LL_Exceeded ");
-    Serial.println(distanceRightObstruction);
+    Serial.println(distancefRightObstruction);
+
+    Serial.print("MV@Distance bleft: V ");
+    Serial.println(distancebLeftCm);
+    Serial.print("MV@Distance bleft: LL ");
+    Serial.println(distancebLeftLimit);
+    Serial.print("MV@Distance bleft: LL_Exceeded ");
+    Serial.println(distancebLeftObstruction);
+  
+    Serial.print("MV@Distance bright: V ");
+    Serial.println(distancebRightCm);
+    Serial.print("MV@Distance bright: LL ");
+    Serial.println(distancebRightLimit);
+    Serial.print("MV@Distance bright: LL_Exceeded ");
+    Serial.println(distancebRightObstruction);
   
     Serial.print("MV@Distance front: V ");
     Serial.println(distanceFrontCm);
@@ -1054,8 +1108,8 @@ void loop()
         encRt = 0;
       }
       if (CommandString.startsWith("Amplifier: ")){                                   // Amplifier 0/1
-        if (CommandString.substring(11) == "0") digitalWrite(amplifierVCC, 0);
-        else digitalWrite(amplifierVCC, 1);
+        if (CommandString.substring(11) == "0") digitalWrite(amplifier_VCC, 0);
+        else digitalWrite(amplifier_VCC, 1);
       }
     }
   }
