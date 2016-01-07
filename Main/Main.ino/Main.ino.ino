@@ -1,7 +1,8 @@
-// ****************************************************************************************************************************************************
+
+//****************************************************************************************************************************************************
 // *** Arduino robot program
 // *** Version: 2016.01.07
-// *** Developer: Wolfgang Glück
+// *** Developer: Wolfgang GlÃ¼ck
 // ***
 // *** Supported hardware:
 // ***   - Rover5 chassis with 4 motors and encoders                (2 encoders used only)
@@ -543,29 +544,32 @@ int distanceDownRawValue = 0;
 // *************************************************************************************************************************
 int i;
 #define ledPin 13                 // LED for heart beat
-#define baud 230400               // Transmission speed for serial
-
+#define baud 115200               // Transmission speed for serial
+int testPoint1 = 0;
+int testPoint2 = 0;
+int testPoint3 = 0;
 
 // Commands
 // ***********************************************************************************************************************
 
 const int bSize = 20;
 int ByteCount;
-char Buffer[bSize];  // Serial buffer
-char Command[18];    // Arbitrary Value for command size
+char Buffer[bSize];             // Serial buffer
+char Command[18];               // Arbitrary Value for command size
 String CommandString = "";
+String CommandStringS = "";     // for mirroring commands
 
 void SerialParser(void)
 {
   //  One command per line.
-  //  Command Format: "up to 18 Letter command <\0>"
+  //  Command Format: "up to 18 Letter command <\n>"
   //  count will  be below Zero on a timeout.
-  //  read up to X chars or until EOT - in this case "\0"
+  //  read up to X chars or until EOT - in this case "\n"
   ByteCount = -1;
-  ByteCount =  Serial.readBytesUntil('\0', Buffer, bSize);
-  if (ByteCount  > 0) strcpy(Command, strtok(Buffer, "\0"));
+  ByteCount =  Serial.readBytesUntil('\n', Buffer, bSize);
+  if (ByteCount  > 0) strcpy(Command, strtok(Buffer, "\n"));
   memset(Buffer, 0, sizeof(Buffer));   // Clear contents of Buffer
-  Serial.flush();
+  //Serial.flush();
 }
 
 //  Setup
@@ -652,10 +656,11 @@ void setup()
 void loop()
 {
 
-  // LED heart beat
+  // LED heart beat an cycle time control
   // *********************************************************************************************************************************
   digitalWrite(ledPin, digitalRead(ledPin) ^ 1);   // toggle LED pin by XOR
-  delay(250);
+  // regulation of cycle time because of intermediateAngle calculation
+  delay(250); 
 
   // Read battery probe and check limit
   // *********************************************************************************************************************************
@@ -1045,9 +1050,17 @@ void loop()
     Serial.println(turnSlow90LeftCommand);
     Serial.print("S@Turn slow 90 right: ");
     Serial.println(turnSlow90RightCommand);
+    Serial.print("S@TestPoint1: ");
+    Serial.println(testPoint1);
+    Serial.print("S@TestPoint2: ");
+    Serial.println(testPoint2);
+    Serial.print("S@TestPoint3: ");
+    Serial.println(testPoint3);
+    Serial.print("I@Command: ");
+    Serial.println(CommandStringS);
     
     // wait for transmission has been done
-    Serial.flush();
+    // Serial.flush();
   
     // Get command from USB interface
     // *************************************************************************************************************************************
@@ -1055,9 +1068,14 @@ void loop()
     SerialParser();
     if (ByteCount  > 0) {
       CommandString = Command;
+      testPoint1 = 1;
+      CommandStringS = CommandString;
       // It is allowed to change between driving commands directly, no need for a stop command between driving commands
   
-      if (CommandString.startsWith("Stop")) forwardStopCommand = true;
+      if (CommandString.startsWith("Stop")) {forwardStopCommand = true;
+         testPoint2 = 1;
+      }
+      
       if (CommandString.startsWith("ForwardSlow")) {
         forwardStopCommand = false; forwardSlowCommand = true; forwardHalfCommand = false; forwardFullCommand = false;
         turnSlow45LeftCommand = false; turnSlow45RightCommand = false;
@@ -1118,10 +1136,11 @@ void loop()
     }
   }
   else {usbDisturbance = true;                                                        // USB disturbance
+  // Serial.flush();  // just for test
   Serial.end();
   Serial.begin(baud);
   Serial.setTimeout(10);
-  delay(100);                                                                         // wait for next trial
+  delay(1000);                                                                         // wait for next trial
   }
 
   // Supervision of W-LAN Communication
@@ -1138,3 +1157,4 @@ void loop()
     wlanReadyCount = 3;
   }
 }
+
