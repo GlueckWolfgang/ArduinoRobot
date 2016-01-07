@@ -81,7 +81,7 @@ boolean LrollLimitExceeded = false;
 
 // Amplifier
 // *************************************************************************************************************************
-#define amplifier_VCC 23       // VCC switch for amplifire
+#define amplifier_VCC 23       // VCC switch for amplifier
 
 // Communication
 // *************************************************************************************************************************
@@ -191,6 +191,7 @@ void MotorControl()
     turnSlow45RightCommand = false;
     turnSlow90LeftCommand = false;
     turnSlow90RightCommand = false;
+    forwardStopCommand = true;
     turnFinished = true;
     startAngle = 0;
   }
@@ -566,13 +567,14 @@ void SerialParser(void)
 // *************************************************************************************************************************
 int i;
 #define ledPin 13                 // LED for heart beat
+#define baud 230400               // Transmission speed for serial
 
 //  Setup
 // ***********************************************************************************************************************
 // ***********************************************************************************************************************
 void setup()
 {
-  Serial.begin(38400);
+  Serial.begin(baud);
   Serial.setTimeout(10);
   
   pinMode(ledPin, OUTPUT);
@@ -654,7 +656,6 @@ void loop()
   // LED heart beat
   // *********************************************************************************************************************************
   digitalWrite(ledPin, digitalRead(ledPin) ^ 1);   // toggle LED pin by XOR
-  delay(250);   // regulation of cycle time because of intermediateAngle calculation
 
   // Read battery probe and check limit
   // *********************************************************************************************************************************
@@ -1005,6 +1006,7 @@ void loop()
     // Serial.println(distanceDownRawValue);         // For test reasons only
     // Serial.print("MV@Distance down pulse time: ");// For test reasons only
     // Serial.println(distanceDownPulseTime);        // For test reasons only
+    
     Serial.print("MV@Distance down: V ");
     Serial.println(distanceDownCm);
     Serial.print("MV@Distance down: UL ");
@@ -1019,8 +1021,10 @@ void loop()
     Serial.println(turnFinished);
     Serial.print("S@Stop: ");
     Serial.println(forwardStopCommand);
+    
     // if (wlanDisturbance)           Serial.println("S@W-LAN disturbance: 1"); // For test reasons only Raspbery supervises the interface too
     // if (usbDisturbance)            Serial.println("S@USB disturbance: 1");   // For test reasons only Raspbery supervises the interface too
+    
     Serial.print("S@Emergency stop: ");
     Serial.println(emergencyStop);
     Serial.print("S@Forward slow: ");
@@ -1115,9 +1119,9 @@ void loop()
   }
   else {usbDisturbance = true;                                                        // USB disturbance
   Serial.end();
-  Serial.begin(38400);
+  Serial.begin(baud);
   Serial.setTimeout(10);
-  delay(1000);                                                                        // wait for next trial
+  delay(100);                                                                         // wait for next trial
   }
 
   // Supervision of W-LAN Communication
