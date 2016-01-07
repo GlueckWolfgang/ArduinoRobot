@@ -1,6 +1,6 @@
 // ****************************************************************************************************************************************************
 // *** Arduino robot program
-// *** Version: 2016.01.04
+// *** Version: 2016.01.07
 // *** Developer: Wolfgang Glück
 // ***
 // *** Supported hardware:
@@ -539,6 +539,12 @@ boolean distanceUpDoor = false;
 #define distanceDownProbe A4
 int distanceDownRawValue = 0;
 
+// Others
+// *************************************************************************************************************************
+int i;
+#define ledPin 13                 // LED for heart beat
+#define baud 230400               // Transmission speed for serial
+
 
 // Commands
 // ***********************************************************************************************************************
@@ -548,7 +554,6 @@ int ByteCount;
 char Buffer[bSize];  // Serial buffer
 char Command[18];    // Arbitrary Value for command size
 String CommandString = "";
-
 
 void SerialParser(void)
 {
@@ -562,12 +567,6 @@ void SerialParser(void)
   memset(Buffer, 0, sizeof(Buffer));   // Clear contents of Buffer
   Serial.flush();
 }
-
-// Others
-// *************************************************************************************************************************
-int i;
-#define ledPin 13                 // LED for heart beat
-#define baud 230400               // Transmission speed for serial
 
 //  Setup
 // ***********************************************************************************************************************
@@ -656,6 +655,7 @@ void loop()
   // LED heart beat
   // *********************************************************************************************************************************
   digitalWrite(ledPin, digitalRead(ledPin) ^ 1);   // toggle LED pin by XOR
+  delay(250);
 
   // Read battery probe and check limit
   // *********************************************************************************************************************************
@@ -771,28 +771,28 @@ void loop()
     distancefRightCm = distancefRightPulseTime / 29 / 2;
   }
   distancefRightObstruction = (distancefRightCm < distancefRightLimit);// Obstruction detected front right
-
-  digitalWrite(distancebLeftTrig, LOW);                               // back Left
-  delayMicroseconds(5);                                               // ****
-  digitalWrite(distancebLeftTrig, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(distancebLeftTrig, LOW);
-  distancebLeftPulseTime = pulseIn(distancebLeftEcho, HIGH);
-  if (distancebLeftPulseTime > 60) {                                  // disturbance filter
-    distancebLeftCm = distancebLeftPulseTime / 29 / 2;
-  }
-  distancebLeftObstruction = (distancebLeftCm < distancebLeftLimit);  // Obstruction detected back left
-
-  digitalWrite(distancebRightTrig, LOW);                              // back Right
-  delayMicroseconds(5);                                               // *****
-  digitalWrite(distancebRightTrig, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(distancebRightTrig, LOW);
-  distancebRightPulseTime = pulseIn(distancebRightEcho, HIGH);
-  if (distancebRightPulseTime > 60) {                                  // disturbance filter
-    distancebRightCm = distancebRightPulseTime / 29 / 2;
-  }
-  distancebRightObstruction = (distancebRightCm < distancebRightLimit);// Obstruction detected back right
+//  Hardware not yet in place
+//  digitalWrite(distancebLeftTrig, LOW);                               // back Left
+//  delayMicroseconds(5);                                               // ****
+//  digitalWrite(distancebLeftTrig, HIGH);
+//  delayMicroseconds(10);
+//  digitalWrite(distancebLeftTrig, LOW);
+//  distancebLeftPulseTime = pulseIn(distancebLeftEcho, HIGH);
+//  if (distancebLeftPulseTime > 60) {                                  // disturbance filter
+//    distancebLeftCm = distancebLeftPulseTime / 29 / 2;
+//  }
+//  distancebLeftObstruction = (distancebLeftCm < distancebLeftLimit);  // Obstruction detected back left
+//
+//  digitalWrite(distancebRightTrig, LOW);                              // back Right
+//  delayMicroseconds(5);                                               // *****
+//  digitalWrite(distancebRightTrig, HIGH);
+//  delayMicroseconds(10);
+//  digitalWrite(distancebRightTrig, LOW);
+//  distancebRightPulseTime = pulseIn(distancebRightEcho, HIGH);
+//  if (distancebRightPulseTime > 60) {                                  // disturbance filter
+//    distancebRightCm = distancebRightPulseTime / 29 / 2;
+//  }
+//  distancebRightObstruction = (distancebRightCm < distancebRightLimit);// Obstruction detected back right
 
   digitalWrite(distanceFrontTrig, LOW);                               // Front
   delayMicroseconds(5);                                               // *****
