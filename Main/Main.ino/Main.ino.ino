@@ -659,8 +659,9 @@ void loop()
   // LED heart beat an cycle time control
   // *********************************************************************************************************************************
   digitalWrite(ledPin, digitalRead(ledPin) ^ 1);   // toggle LED pin by XOR
-  // regulation of cycle time because of intermediateAngle calculation
-  delay(250); 
+  // regulation of cycle time because of intermediateAngle calculation  total cycletime should be approximately 250 ms
+  // For that count the LED blinks up to 20 and stop the time. It shuld be araound 10s. If not adjust the timer below.
+  delay(80); 
 
   // Read battery probe and check limit
   // *********************************************************************************************************************************
