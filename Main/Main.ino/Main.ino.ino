@@ -1050,17 +1050,15 @@ void loop()
     Serial.println(turnSlow90LeftCommand);
     Serial.print("S@Turn slow 90 right: ");
     Serial.println(turnSlow90RightCommand);
-    Serial.print("S@TestPoint1: ");
-    Serial.println(testPoint1);
-    Serial.print("S@TestPoint2: ");
-    Serial.println(testPoint2);
-    Serial.print("S@TestPoint3: ");
-    Serial.println(testPoint3);
-    Serial.print("I@Command: ");
-    Serial.println(CommandStringS);
     
-    // wait for transmission has been done
-    // Serial.flush();
+//    Serial.print("S@TestPoint1: ");         // for testing set e.g. testPoint1 = 1; and read it in the datastream on your PC
+//    Serial.println(testPoint1);
+//    Serial.print("S@TestPoint2: ");
+//    Serial.println(testPoint2);
+//    Serial.print("S@TestPoint3: ");
+//    Serial.println(testPoint3);
+//    Serial.print("I@Command: ");
+//    Serial.println(CommandStringS);
   
     // Get command from USB interface
     // *************************************************************************************************************************************
@@ -1068,12 +1066,10 @@ void loop()
     SerialParser();
     if (ByteCount  > 0) {
       CommandString = Command;
-      testPoint1 = 1;
       CommandStringS = CommandString;
       // It is allowed to change between driving commands directly, no need for a stop command between driving commands
   
       if (CommandString.startsWith("Stop")) {forwardStopCommand = true;
-         testPoint2 = 1;
       }
       
       if (CommandString.startsWith("ForwardSlow")) {
