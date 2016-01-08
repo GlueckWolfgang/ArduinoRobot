@@ -1,8 +1,8 @@
 
 //****************************************************************************************************************************************************
 // *** Arduino robot program
-// *** Version: 2016.01.07
-// *** Developer: Wolfgang GlÃ¼ck
+// *** Version: 2016.01.08
+// *** Developer: Wolfgang Glück
 // ***
 // *** Supported hardware:
 // ***   - Rover5 chassis with 4 motors and encoders                (2 encoders used only)
@@ -934,8 +934,9 @@ void loop()
     Serial.print("MV@Motor4 current: UL_Exceeded ");
     Serial.println(motor4Stall);
 
-    Serial.print("Compass: ");
-    Serial.println(CMPS11_VCC);
+    // Serial.print("Compass: ");
+    // Serial.println(CMPS11_VCC);
+    
     Serial.print("MV@Roll: V ");
     Serial.println(roll, DEC);
     Serial.print("MV@Roll: UL ");
@@ -1028,8 +1029,8 @@ void loop()
     Serial.print("S@Stop: ");
     Serial.println(forwardStopCommand);
     
-    // if (wlanDisturbance)           Serial.println("S@W-LAN disturbance: 1"); // For test reasons only Raspbery supervises the interface too
-    // if (usbDisturbance)            Serial.println("S@USB disturbance: 1");   // For test reasons only Raspbery supervises the interface too
+    Serial.print("S@W-LAN disturbance: ");
+    Serial.println(wlanDisturbance);
     
     Serial.print("S@Emergency stop: ");
     Serial.println(emergencyStop);
