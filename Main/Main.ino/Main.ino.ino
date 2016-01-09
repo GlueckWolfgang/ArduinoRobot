@@ -1,7 +1,7 @@
 
 //****************************************************************************************************************************************************
 // *** Arduino robot program
-// *** Version: 2016.01.08
+// *** Version: 2016.01.09
 // *** Developer: Wolfgang Glück
 // ***
 // *** Supported hardware:
@@ -487,28 +487,28 @@ int16_t QuadratureEncoderReadRt( void ) // read single step encoders
 // ***************************************************************************************************************
 #define distancefRightEcho 36
 #define distancefRightTrig 37
-#define distancefRightLimit 40
+#define distancefRightLimit 20
 int distancefRightPulseTime = 0;
 int distancefRightCm = 0;
 boolean distancefRightObstruction = false;
 
 #define distancefLeftEcho 42
 #define distancefLeftTrig 43
-#define distancefLeftLimit 40
+#define distancefLeftLimit 20
 int distancefLeftPulseTime = 0;
 int distancefLeftCm = 0;
 boolean distancefLeftObstruction = false;
 
 #define distancebRightEcho 48
 #define distancebRightTrig 49
-#define distancebRightLimit 40
+#define distancebRightLimit 20
 int distancebRightPulseTime = 0;
 int distancebRightCm = 0;
 boolean distancebRightObstruction = false;
 
 #define distancebLeftEcho 50
 #define distancebLeftTrig 51
-#define distancebLeftLimit 40
+#define distancebLeftLimit 20
 int distancebLeftPulseTime = 0;
 int distancebLeftCm = 0;
 boolean distancebLeftObstruction = false;
@@ -516,7 +516,7 @@ boolean distancebLeftObstruction = false;
 
 #define distanceFrontEcho 38
 #define distanceFrontTrig 39
-#define distanceFrontLimit 40
+#define distanceFrontLimit 20
 int distanceFrontPulseTime = 0;
 int distanceFrontCm = 0;
 boolean distanceFrontObstruction = false;
