@@ -544,7 +544,7 @@ int distanceDownRawValue = 0;
 // *************************************************************************************************************************
 int i;
 #define ledPin 13                 // LED for heart beat
-#define baud 115200               // Transmission speed for serial
+#define baud 38400                // Transmission speed for serial
 int testPoint1 = 0;
 int testPoint2 = 0;
 int testPoint3 = 0;
@@ -1061,6 +1061,7 @@ void loop()
 //    Serial.println(testPoint3);
 //    Serial.print("I@Command: ");
 //    Serial.println(CommandStringS);
+    Serial.flush();
   
     // Get command from USB interface
     // *************************************************************************************************************************************
@@ -1134,7 +1135,7 @@ void loop()
     }
   }
   else {usbDisturbance = true;                                                        // USB disturbance
-  // Serial.flush();  // just for test
+  Serial.flush();
   Serial.end();
   Serial.begin(baud);
   Serial.setTimeout(10);
