@@ -9,19 +9,26 @@
 // ***   - Rover5 chassis with 2 motors and encoders                (optional, just remove the unused parts of code)
 // ***   - Motor control board (MCB) for 4 motors and encoders
 // ***   - Motor control Board (MCB) for 2 motors and encoders      (optional)
-// ***   - Arduino mega (Spider)
-// ***   - CMPS11                                                   (via 10cm I2C bus, using internal pullups by default)
-// ***   - 7 x US-015
-// ***   - 1 x IR Sensor (Sharp)
+// ***   - Arduino mega                                             (Spider)
+// ***   - Compass                                                  (CMPS11 via 10cm I2C bus, using internal pullups by default)
+// ***   - 7 x Ultra-sonic sensor                                   (US-015)
+// ***   - 1 x Infra red Sensor                                     (Sharp 2Y0A21)
 // ***   - 7,2 V Battery for MCB and drives                         (6x 1,2 V NiMH Akku type D 10'000 mAh, same battery pack as for 9,6 V)
 // ***   - 9,6 V Battery for Arduino and MCB                        (8x 1,2 V NiMH Akku type D 10'000 mAh)
+// ***   - Battery holder for 8 type D cells
 // ***   - 5 V / Gnd     for MCB is connected to Arduino 5 V / Gnd
-// ***   - 5 V   Battery for Raspberry pi                           (Power bank 20'000 mAh)
+// ***   - 5 V   Battery for Raspberry pi                           (VOLTCRAFT 20800 mAh PB-19 POWERBANK)
+// ***   - 5 Resistors as voltage divider                           (4,7 kOhm 0,5 W)
+// ***   - Audio amplifier                                          (KEMO M031N 3.5 W 4.5 - 12 V, operated at 9,6 V Battery)
+// ***   - Laudspeaker                                              (LSM-28M/NT-B, 8 OHM, 2W)
+// ***   - FET Transitor for switching audio amlifier on/off        (IRL3803PBF)
+// ***   - Potentiometer for volume regulation                      (10 kOhm)
 // ***
 // ***   - Raspberry pi 2
 // ***   - SD card 32GB
 // ***   - camera
-// ***   - W-LAN adapter EW-7612UAN V2
+// ***   - USB Sound card                                           ()
+// ***   - W-LAN adapter                                            (EW-7612UAN V2)
 // ***   - USB cable from Raspberry pi to Arduino
 // ***
 // *** Functions:
@@ -39,8 +46,8 @@
 // ***   - (ok) get switch on/off command for audio amplifier
 // ***   - (ok) Get reset command for encoder values
 // ***   - (ok) Get status about W-LAN from USB interface
-// ***   - (ok) Supervise communication status to USB interface
-// *** Emergency stop commented out for test reasons
+// ***   - (ok) Get switch command on/off for audio amplifier
+// ***   - (ok) Supervise communication status for USB interface
 // ***   - (ok) Emergency stop if any battery voltage level is low or an obstruction is close or an abyss is detected
 // ***          or any motor stall or pitch or roll exceeds a limit or communication to USB is down or W-Lan is down
 // *************************************************************************************************************************
