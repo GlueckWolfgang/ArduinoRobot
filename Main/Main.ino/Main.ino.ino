@@ -1,7 +1,7 @@
 
 //****************************************************************************************************************************************************
 // *** Arduino robot program
-// *** Version: 2016.01.09
+// *** Version: 2016.01.10
 // *** Developer: Wolfgang Glück
 // ***
 // *** Supported hardware:
@@ -764,8 +764,9 @@ void loop()
   distancefLeftPulseTime = pulseIn(distancefLeftEcho, HIGH);
   if (distancefLeftPulseTime > 60) {                                  // disturbance filter
     distancefLeftCm = distancefLeftPulseTime / 29 / 2;
+    distancefLeftObstruction = (distancefLeftCm < distancefLeftLimit);  // Obstruction detected front left
   }
-  distancefLeftObstruction = (distancefLeftCm < distancefLeftLimit);  // Obstruction detected front left
+  
 
   digitalWrite(distancefRightTrig, LOW);                              // front Right
   delayMicroseconds(5);                                               // *****
@@ -775,8 +776,9 @@ void loop()
   distancefRightPulseTime = pulseIn(distancefRightEcho, HIGH);
   if (distancefRightPulseTime > 60) {                                  // disturbance filter
     distancefRightCm = distancefRightPulseTime / 29 / 2;
+    distancefRightObstruction = (distancefRightCm < distancefRightLimit);// Obstruction detected front right
   }
-  distancefRightObstruction = (distancefRightCm < distancefRightLimit);// Obstruction detected front right
+  
 //  Hardware not yet in place
 //  digitalWrite(distancebLeftTrig, LOW);                               // back Left
 //  delayMicroseconds(5);                                               // ****
@@ -786,8 +788,8 @@ void loop()
 //  distancebLeftPulseTime = pulseIn(distancebLeftEcho, HIGH);
 //  if (distancebLeftPulseTime > 60) {                                  // disturbance filter
 //    distancebLeftCm = distancebLeftPulseTime / 29 / 2;
+//    distancebLeftObstruction = (distancebLeftCm < distancebLeftLimit);  // Obstruction detected back left
 //  }
-//  distancebLeftObstruction = (distancebLeftCm < distancebLeftLimit);  // Obstruction detected back left
 //
 //  digitalWrite(distancebRightTrig, LOW);                              // back Right
 //  delayMicroseconds(5);                                               // *****
@@ -797,8 +799,8 @@ void loop()
 //  distancebRightPulseTime = pulseIn(distancebRightEcho, HIGH);
 //  if (distancebRightPulseTime > 60) {                                  // disturbance filter
 //    distancebRightCm = distancebRightPulseTime / 29 / 2;
+//    distancebRightObstruction = (distancebRightCm < distancebRightLimit);// Obstruction detected back right
 //  }
-//  distancebRightObstruction = (distancebRightCm < distancebRightLimit);// Obstruction detected back right
 
   digitalWrite(distanceFrontTrig, LOW);                               // Front
   delayMicroseconds(5);                                               // *****
@@ -808,8 +810,9 @@ void loop()
   distanceFrontPulseTime = pulseIn(distanceFrontEcho, HIGH);
   if (distanceFrontPulseTime > 60) {                                  // disturbance filter
     distanceFrontCm = distanceFrontPulseTime / 29 / 2;
+    distanceFrontObstruction = (distanceFrontCm < distanceFrontLimit);// Obstruction detected front side
   }
-  distanceFrontObstruction = (distanceFrontCm < distanceFrontLimit);  // Obstruction detected front side
+  
 
   digitalWrite(distanceUpTrig, LOW);                                  // Up
   delayMicroseconds(5);                                               // **
@@ -819,8 +822,9 @@ void loop()
   distanceUpPulseTime = pulseIn(distanceUpEcho, HIGH);
   if (distanceUpPulseTime > 60) {                                     // disturbance filter
     distanceUpCm = distanceUpPulseTime / 29 / 2;
+    distanceUpDoor = (distanceUpCm < distanceUpLimit);                // Door passing
   }
-  distanceUpDoor = (distanceUpCm < distanceUpLimit);                  // Door passing
+  
 
   digitalWrite(distanceDownTrig, LOW);                                // Down
   delayMicroseconds(5);                                               // ****
