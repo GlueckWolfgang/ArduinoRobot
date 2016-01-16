@@ -1,7 +1,7 @@
 
 //****************************************************************************************************************************************************
 // *** Arduino robot program
-// *** Version: 2016.01.10
+// *** Version: 2016.01.16
 // *** Developer: Wolfgang Glück
 // ***
 // *** Supported hardware:
@@ -21,13 +21,13 @@
 // ***   - 5 Resistors as voltage divider                           (4,7 kOhm 0,5 W)
 // ***   - Audio amplifier                                          (KEMO M031N 3.5 W 4.5 - 12 V, operated at 9,6 V Battery)
 // ***   - Laudspeaker                                              (LSM-28M/NT-B, 8 OHM, 2W)
-// ***   - FET Transitor for switching audio amlifier on/off        (IRL3803PBF)
+// ***   - FET Transitor for switching audio amlifier on/off        (IRL3803PbF)
 // ***   - Potentiometer for volume regulation                      (10 kOhm)
 // ***
 // ***   - Raspberry pi 2
 // ***   - SD card 32GB
 // ***   - camera
-// ***   - USB Sound card                                           ()
+// ***   - USB Sound card                                           (Speedlink VIGO USB Soundcard)
 // ***   - W-LAN adapter                                            (EW-7612UAN V2)
 // ***   - USB cable from Raspberry pi to Arduino
 // ***
@@ -47,6 +47,7 @@
 // ***   - (ok) Get reset command for encoder values
 // ***   - (ok) Get status about W-LAN from USB interface
 // ***   - (ok) Get switch command on/off for audio amplifier
+// ***   - (  ) Forward direction control
 // ***   - (ok) Supervise communication status for USB interface
 // ***   - (ok) Emergency stop if any battery voltage level is low or an obstruction is close or an abyss is detected
 // ***          or any motor stall or pitch or roll exceeds a limit or communication to USB is down or W-Lan is down
