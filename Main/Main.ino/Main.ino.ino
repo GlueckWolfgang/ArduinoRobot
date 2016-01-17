@@ -1,7 +1,7 @@
 
 //****************************************************************************************************************************************************
 // *** Arduino robot program
-// *** Version: 2016.01.16
+// *** Version: 2016.01.17
 // *** Developer: Wolfgang Glück
 // ***
 // *** Supported hardware:
@@ -47,7 +47,7 @@
 // ***   - (ok) Get reset command for encoder values
 // ***   - (ok) Get status about W-LAN from USB interface
 // ***   - (ok) Get switch command on/off for audio amplifier
-// ***   - (  ) Forward direction control
+// ***   - (  ) Get align command for forward direction control
 // ***   - (ok) Supervise communication status for USB interface
 // ***   - (ok) Emergency stop if any battery voltage level is low or an obstruction is close or an abyss is detected
 // ***          or any motor stall or pitch or roll exceeds a limit or communication to USB is down or W-Lan is down
@@ -177,12 +177,81 @@ boolean turnSlow45RightCommand = false; // Turn slow 45 degrees right
 boolean turnSlow90LeftCommand  = false; // Turn slow 90 degrees left
 boolean turnSlow90RightCommand = false; // Turn slow 90 degrees right
 boolean turnFinished        = true;
+boolean alignCommand = false;           // align command
 int stopDutyCycle           =   0;   //   0% of 256
 int slowDutyCycle           =  64;   //  25% of 256
 int halfDutyCycle           = 128;   //  50% of 256
 int fullDutyCycle           = 213;   //  80% of 256, contains reserve for steering
 int steeringRate            = 20;    //    % of DutyCycle
 int steeringDutyCycle       = 0;     // Calculated dutyCycle
+
+// Arrays and variables for alignment algorithm
+float SrL [10] [6] = {{1.0, 0.0, 0.0, 0.0, 0.0, 0.0},   // Left: 0  1   2    3      4      5
+                      {2.0, 0.0, 0.0, 0.0, 0.0, 0.0},   //       x, y, dxi, dyi, dxi*dyi, dxi2
+                      {3.0, 0.0, 0.0, 0.0, 0.0, 0.0},
+                      {4.0, 0.0, 0.0, 0.0, 0.0, 0.0},
+                      {5.0, 0.0, 0.0, 0.0, 0.0, 0.0},
+                      {6.0, 0.0, 0.0, 0.0, 0.0, 0.0},
+                      {7.0, 0.0, 0.0, 0.0, 0.0, 0.0},
+                      {8.0, 0.0, 0.0, 0.0, 0.0, 0.0},
+                      {9.0, 0.0, 0.0, 0.0, 0.0, 0.0},
+                      {10.0, 0.0, 0.0, 0.0, 0.0, 0.0}};
+                      
+float SrR [10] [6] = {{1.0, 0.0, 0.0, 0.0, 0.0, 0.0},   // Right: 
+                      {2.0, 0.0, 0.0, 0.0, 0.0, 0.0},
+                      {3.0, 0.0, 0.0, 0.0, 0.0, 0.0},
+                      {4.0, 0.0, 0.0, 0.0, 0.0, 0.0},
+                      {5.0, 0.0, 0.0, 0.0, 0.0, 0.0},
+                      {6.0, 0.0, 0.0, 0.0, 0.0, 0.0},
+                      {7.0, 0.0, 0.0, 0.0, 0.0, 0.0},
+                      {8.0, 0.0, 0.0, 0.0, 0.0, 0.0},
+                      {9.0, 0.0, 0.0, 0.0, 0.0, 0.0},
+                      {10.0, 0.0, 0.0, 0.0, 0.0, 0.0}};
+                      
+
+       
+float bL, bR, aL, aR  = 0.0;                          // function left and right f(x)= ax + b
+int countL, countR;
+
+boolean linearRegression(float Sr[10][6], float value, float a, float b, int count)
+                                                      // not yet tested
+{                                                     // Linear regression calculation 
+int i;                                                // *****************************
+float xm = 5.5, ym = 0.0;                             // mean values
+float Sdxidyi, Sdxi2 = 0.0;                           // sums over i
+         
+for (i = 9; i > 0; i --) Sr[i][1] = Sr[i - 1][1];     // shift register + 1
+
+Sr[0][1] = value;                                     // put new value in to register
+
+if (count < 10) return false;
+else{
+  count += 1;                                                    
+  for (i = 0; i < 10; i ++)                             // calculate mean values                             
+   {xm = xm + Sr[i][0];
+    ym = ym + Sr[i][1];
+   }
+  xm = xm/10.0;
+  ym = ym/10.0;
+                                                         
+  for (i = 0; i < 10; i ++)                              // calculate table and sums
+    {Sr[i][2] = Sr[i][0] - xm;                           // dxi
+     Sr[i][3] = Sr[i][1] - ym;                           // dyi
+     Sr[i][4] = Sr[i][2] * Sr[i][3];                     // dxi * dyi
+     Sdxidyi  = Sdxidyi + Sr[i][4];                      // sum (dxi * dyi)
+     Sr[i][5] = Sr[i][2] * Sr[i][2];                     // dxi2
+     Sdxi2    = Sdxi2 + Sr[i][5];                        // sum (dxi2)
+    }
+    
+    if (Sdxi2 > 0)                                       // calculate funktion paramters of f(x) = ax + b
+      {
+        a = Sdxidyi/Sdxi2;
+        b = ym - a * xm;
+        return true;
+      }
+    else return false;
+  }
+}
 
 void MotorControl()
 {
@@ -201,16 +270,19 @@ void MotorControl()
     turnSlow90LeftCommand = false;
     turnSlow90RightCommand = false;
     forwardStopCommand = true;
+    alignCommand = false;
     turnFinished = true;
     startAngle = 0;
   }
-
+  // prepare align
+  
   if (forwardSlowCommand) {                     // Forward slow
     digitalWrite(motor1Direction, forward);     // ************
     digitalWrite(motor2Direction, forward);
     digitalWrite(motor3Direction, forward);
     digitalWrite(motor4Direction, forward);
     steeringDutyCycle = slowDutyCycle + (slowDutyCycle * steeringRate / 100);
+    // include align
     if (steeringLeftCommand) {
       analogWrite(motor1PWM, steeringDutyCycle);// Steering Left
       analogWrite(motor2PWM, steeringDutyCycle);
@@ -239,6 +311,7 @@ void MotorControl()
     digitalWrite(motor3Direction, forward);
     digitalWrite(motor4Direction, forward);
     steeringDutyCycle = halfDutyCycle + (halfDutyCycle * steeringRate / 100);
+    // include align
     if (steeringLeftCommand) {
       analogWrite(motor1PWM, steeringDutyCycle);// Steering Left
       analogWrite(motor2PWM, steeringDutyCycle);
@@ -267,6 +340,7 @@ void MotorControl()
     digitalWrite(motor3Direction, forward);
     digitalWrite(motor4Direction, forward);
     steeringDutyCycle = fullDutyCycle + (fullDutyCycle * steeringRate / 100);
+    // include align
     if (steeringLeftCommand) {
       analogWrite(motor1PWM, steeringDutyCycle);// Steering Left
       analogWrite(motor2PWM, steeringDutyCycle);
@@ -796,7 +870,10 @@ void loop()
 //  distancebLeftPulseTime = pulseIn(distancebLeftEcho, HIGH);
 //  if (distancebLeftPulseTime > 60) {                                  // disturbance filter
 //    distancebLeftCm = distancebLeftPulseTime / 29 / 2;
-//    distancebLeftObstruction = (distancebLeftCm < distancebLeftLimit);  // Obstruction detected back left
+//    distancebLeftObstruction = (distancebLeftCm < distancebLeftLimit);// Obstruction detected back left
+//    if (distancebLeftCm > 10 && distanceLeftCm < 200 && alignCommand == true){
+//      linearRegression(SrL, distancebLeftCm, aL, bL, count);          // activate regression calculation
+//    } 
 //  }
 //
 //  digitalWrite(distancebRightTrig, LOW);                              // back Right
@@ -808,7 +885,12 @@ void loop()
 //  if (distancebRightPulseTime > 60) {                                  // disturbance filter
 //    distancebRightCm = distancebRightPulseTime / 29 / 2;
 //    distancebRightObstruction = (distancebRightCm < distancebRightLimit);// Obstruction detected back right
+//    if (distancebLeftCm > 10 && distanceLeftCm < 200 && alignCommand == true){
+//       linearRegression(SrR, distancebRightCm, aR, bR, count);         // activate regression calculation
+//    } 
 //  }
+
+
 
   digitalWrite(distanceFrontTrig, LOW);                               // Front
   delayMicroseconds(5);                                               // *****
@@ -1102,38 +1184,51 @@ void loop()
         turnSlow45LeftCommand = false; turnSlow45RightCommand = false;
         turnSlow90LeftCommand = false; turnSlow90RightCommand = false; turnFinished = true;
       }
+      if (CommandString.startsWith("Align")){
+        alignCommand = true;
+        steeringLeftCommand = false;
+        steeringRightCommand = false;
+        if ((distancebLeftCm < 10 || distancebLeftCm > 200) && (distancebRightCm < 10 || distancebRightCm > 200)) alignCommand = false;
+        else {
+          countL = 1;
+          countR = 1;
+        }
+      }
       if (CommandString.startsWith("SteeringLeft"))  {
         steeringLeftCommand = true;
         steeringRightCommand = false;
+        alignCommand = false;
       }
       if (CommandString.startsWith("SteeringRight")) {
         steeringLeftCommand = false;
         steeringRightCommand = true;
+        alignCommand = false;
       }
       if (CommandString.startsWith("SteeringAhead")) {
         steeringLeftCommand = false;
         steeringRightCommand = false;
+        alignCommand = false;
       }
       if (CommandString.startsWith("TurnSlow45Left")) {
         turnSlow45LeftCommand = true;
         forwardStopCommand = false; forwardSlowCommand = false; forwardHalfCommand = false; forwardFullCommand = false;
-        steeringLeftCommand = false; steeringRightCommand = false;
+        steeringLeftCommand = false; steeringRightCommand = false; alignCommand = false;
       }
   
       if (CommandString.startsWith("TurnSlow45Right")) {
         turnSlow45RightCommand = true;
         forwardStopCommand = false; forwardSlowCommand = false; forwardHalfCommand = false; forwardFullCommand = false;
-        steeringLeftCommand = false; steeringRightCommand = false;
+        steeringLeftCommand = false; steeringRightCommand = false; alignCommand = false;
       }
       if (CommandString.startsWith("TurnSlow90Left")) {
         turnSlow90LeftCommand = true;
         forwardStopCommand = false; forwardSlowCommand = false; forwardHalfCommand = false; forwardFullCommand = false;
-        steeringLeftCommand = false; steeringRightCommand = false;
+        steeringLeftCommand = false; steeringRightCommand = false; alignCommand = false;
       }
       if (CommandString.startsWith("TurnSlow90Right")) {
         turnSlow90RightCommand = true;
         forwardStopCommand = false; forwardSlowCommand = false; forwardHalfCommand = false; forwardFullCommand = false;
-        steeringLeftCommand = false; steeringRightCommand = false;
+        steeringLeftCommand = false; steeringRightCommand = false; alignCommand = false;
       }
       if (CommandString.startsWith("WlanReady")) wlanReady = true;                    // Live beat of W-LAN communication
       if (CommandString.startsWith("EncoderReset")) {
