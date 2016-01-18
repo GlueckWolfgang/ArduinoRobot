@@ -1,7 +1,7 @@
 
 //****************************************************************************************************************************************************
 // *** Arduino robot program
-// *** Version: 2016.01.17
+// *** Version: 2016.01.18
 // *** Developer: Wolfgang Glück
 // ***
 // *** Supported hardware:
@@ -177,7 +177,10 @@ boolean turnSlow45RightCommand = false; // Turn slow 45 degrees right
 boolean turnSlow90LeftCommand  = false; // Turn slow 90 degrees left
 boolean turnSlow90RightCommand = false; // Turn slow 90 degrees right
 boolean turnFinished        = true;
-boolean alignCommand = false;           // align command
+
+// align command
+boolean alignCommand = false;
+boolean alignTrue = false;
 int stopDutyCycle           =   0;   //   0% of 256
 int slowDutyCycle           =  64;   //  25% of 256
 int halfDutyCycle           = 128;   //  50% of 256
@@ -212,6 +215,8 @@ float SrR [10] [6] = {{1.0, 0.0, 0.0, 0.0, 0.0, 0.0},   // Right:
        
 float bL, bR, aL, aR  = 0.0;                          // function left and right f(x)= ax + b
 int countL, countR;
+boolean alignLTrue, alignRTrue = false;
+
 
 boolean linearRegression(float Sr[10][6], float value, float a, float b, int count)
                                                       // not yet tested
@@ -274,7 +279,6 @@ void MotorControl()
     turnFinished = true;
     startAngle = 0;
   }
-  // prepare align
   
   if (forwardSlowCommand) {                     // Forward slow
     digitalWrite(motor1Direction, forward);     // ************
@@ -282,7 +286,6 @@ void MotorControl()
     digitalWrite(motor3Direction, forward);
     digitalWrite(motor4Direction, forward);
     steeringDutyCycle = slowDutyCycle + (slowDutyCycle * steeringRate / 100);
-    // include align
     if (steeringLeftCommand) {
       analogWrite(motor1PWM, steeringDutyCycle);// Steering Left
       analogWrite(motor2PWM, steeringDutyCycle);
@@ -311,7 +314,6 @@ void MotorControl()
     digitalWrite(motor3Direction, forward);
     digitalWrite(motor4Direction, forward);
     steeringDutyCycle = halfDutyCycle + (halfDutyCycle * steeringRate / 100);
-    // include align
     if (steeringLeftCommand) {
       analogWrite(motor1PWM, steeringDutyCycle);// Steering Left
       analogWrite(motor2PWM, steeringDutyCycle);
@@ -340,7 +342,6 @@ void MotorControl()
     digitalWrite(motor3Direction, forward);
     digitalWrite(motor4Direction, forward);
     steeringDutyCycle = fullDutyCycle + (fullDutyCycle * steeringRate / 100);
-    // include align
     if (steeringLeftCommand) {
       analogWrite(motor1PWM, steeringDutyCycle);// Steering Left
       analogWrite(motor2PWM, steeringDutyCycle);
@@ -861,36 +862,111 @@ void loop()
     distancefRightObstruction = (distancefRightCm < distancefRightLimit);// Obstruction detected front right
   }
   
-//  Hardware not yet in place
-//  digitalWrite(distancebLeftTrig, LOW);                               // back Left
-//  delayMicroseconds(5);                                               // ****
-//  digitalWrite(distancebLeftTrig, HIGH);
-//  delayMicroseconds(10);
-//  digitalWrite(distancebLeftTrig, LOW);
-//  distancebLeftPulseTime = pulseIn(distancebLeftEcho, HIGH);
-//  if (distancebLeftPulseTime > 60) {                                  // disturbance filter
-//    distancebLeftCm = distancebLeftPulseTime / 29 / 2;
-//    distancebLeftObstruction = (distancebLeftCm < distancebLeftLimit);// Obstruction detected back left
-//    if (distancebLeftCm > 10 && distanceLeftCm < 200 && alignCommand == true){
-//      linearRegression(SrL, distancebLeftCm, aL, bL, count);          // activate regression calculation
-//    } 
-//  }
-//
-//  digitalWrite(distancebRightTrig, LOW);                              // back Right
-//  delayMicroseconds(5);                                               // *****
-//  digitalWrite(distancebRightTrig, HIGH);
-//  delayMicroseconds(10);
-//  digitalWrite(distancebRightTrig, LOW);
-//  distancebRightPulseTime = pulseIn(distancebRightEcho, HIGH);
-//  if (distancebRightPulseTime > 60) {                                  // disturbance filter
-//    distancebRightCm = distancebRightPulseTime / 29 / 2;
-//    distancebRightObstruction = (distancebRightCm < distancebRightLimit);// Obstruction detected back right
-//    if (distancebLeftCm > 10 && distanceLeftCm < 200 && alignCommand == true){
-//       linearRegression(SrR, distancebRightCm, aR, bR, count);         // activate regression calculation
-//    } 
-//  }
+  digitalWrite(distancebLeftTrig, LOW);                               // back Left
+  delayMicroseconds(5);                                               // ****
+  digitalWrite(distancebLeftTrig, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(distancebLeftTrig, LOW);
+  distancebLeftPulseTime = pulseIn(distancebLeftEcho, HIGH);
+  if (distancebLeftPulseTime > 60) {                                  // disturbance filter
+    distancebLeftCm = distancebLeftPulseTime / 29 / 2;
+    distancebLeftObstruction = (distancebLeftCm < distancebLeftLimit);// Obstruction detected back left
+    if (distancebLeftCm > 10 && distancebLeftCm < 200 && alignCommand == true){
+            // activate regression calculation
+    } 
+  }
+  
+  digitalWrite(distancebRightTrig, LOW);                              // back Right
+  delayMicroseconds(5);                                               // *****
+  digitalWrite(distancebRightTrig, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(distancebRightTrig, LOW);
+  distancebRightPulseTime = pulseIn(distancebRightEcho, HIGH);
+  if (distancebRightPulseTime > 60) {                                  // disturbance filter
+    distancebRightCm = distancebRightPulseTime / 29 / 2;
+    distancebRightObstruction = (distancebRightCm < distancebRightLimit);// Obstruction detected back right
+  }
+  
+  // Alignment
+  // *********
+  alignLTrue = false;
+  alignRTrue = false;
+  if (alignCommand && (distancebLeftCm < 10 || distancebLeftCm > 200) && (distancebRightCm < 10 || distancebRightCm > 200)) {
+    // no wall in range
+    alignCommand = false;
+    countL = 1;
+    countR = 1;
+  }
+  else {
+    if (alignCommand && distancebLeftCm >= 10 && distancebLeftCm <= 200 && distancebRightCm >= 10 && distancebRightCm <= 200) {
+      // two walls in range
+      alignLTrue = linearRegression(SrL, distancebLeftCm, aL, bL, countL);
+      alignRTrue = linearRegression(SrR, distancebRightCm, aR, bR, countR);
+
+      // select the wall in shorter distance
+      if (distancebLeftCm <= distancebRightCm)  alignRTrue = false;
+      else                                      alignLTrue = false;  
+    }
+    else {
+      if (alignCommand && distancebLeftCm >= 10 && distancebLeftCm <= 200){
+        // left wall only in range
+        alignLTrue = linearRegression(SrL, distancebLeftCm, aL, bL, countL);
+        countR = 1;   
+      }
+      else {
+        if (alignCommand) {
+          // right wall only in range
+          alignRTrue = linearRegression(SrR, distancebRightCm, aR, bR, countR);
+          countL = 1;
+        }
+      }
+    }
+  }
+  if (alignCommand && alignLTrue) {
+    // Align based on left sensor
+    if (aL > - 0.2 && aL < 0.2){
+      // steer ahead and end align
+      steeringLeftCommand = false;
+      steeringRightCommand = false;
+      alignCommand = false;
+    }
+    if (aL > 0) {
+      // Steering right
+      steeringLeftCommand = false;
+      steeringRightCommand = true;
+    }
+    else {
+      // Steering left
+      steeringRightCommand = false;
+      steeringLeftCommand = true;
+    }
+  }
+  if (alignCommand && alignRTrue) {
+    // Align based on right sensor
+    if (aR > - 0.2 && aR < 0.2){
+      // steer ahead and end align
+      steeringLeftCommand = false;
+      steeringRightCommand = false;
+      alignCommand = false;
+    }
+    if (aR > 0) {
+      // Steering right
+      steeringLeftCommand = false;
+      steeringRightCommand = true;
+    }
+    else {
+      // Steering left
+      steeringRightCommand = false;
+      steeringLeftCommand = true;
+    }
+  }
 
 
+  
+
+ 
+
+  
 
   digitalWrite(distanceFrontTrig, LOW);                               // Front
   delayMicroseconds(5);                                               // *****
@@ -1028,9 +1104,6 @@ void loop()
     Serial.print("MV@Motor4 current: UL_Exceeded ");
     Serial.println(motor4Stall);
 
-    // Serial.print("Compass: ");
-    // Serial.println(CMPS11_VCC);
-    
     Serial.print("MV@Roll: V ");
     Serial.println(roll, DEC);
     Serial.print("MV@Roll: UL ");
@@ -1186,14 +1259,12 @@ void loop()
       }
       if (CommandString.startsWith("Align")){
         alignCommand = true;
+        countL = 1; // reset counter for shiftregister
+        countR = 1;
         steeringLeftCommand = false;
         steeringRightCommand = false;
-        if ((distancebLeftCm < 10 || distancebLeftCm > 200) && (distancebRightCm < 10 || distancebRightCm > 200)) alignCommand = false;
-        else {
-          countL = 1;
-          countR = 1;
         }
-      }
+        
       if (CommandString.startsWith("SteeringLeft"))  {
         steeringLeftCommand = true;
         steeringRightCommand = false;
