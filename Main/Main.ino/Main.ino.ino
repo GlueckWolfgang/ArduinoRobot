@@ -1,7 +1,7 @@
 
 //****************************************************************************************************************************************************
 // *** Arduino robot program
-// *** Version: 2016.01.18
+// *** Version: 2016.01.26
 // *** Developer: Wolfgang Glück
 // ***
 // *** Supported hardware:
@@ -12,7 +12,7 @@
 // ***   - Arduino mega                                             (Spider)
 // ***   - Compass                                                  (CMPS11 via 10cm I2C bus, using internal pullups by default)
 // ***   - 7 x Ultra-sonic sensor                                   (US-015)
-// ***   - 1 x Infra red Sensor                                     (Sharp 2Y0A21)
+// ***   - 1 x Infra red Sensor (not in use)                        (Sharp 2Y0A21)
 // ***   - 7,2 V Battery for MCB and drives                         (6x 1,2 V NiMH Akku type D 10'000 mAh, same battery pack as for 9,6 V)
 // ***   - 9,6 V Battery for Arduino and MCB                        (8x 1,2 V NiMH Akku type D 10'000 mAh)
 // ***   - Battery holder for 8 type D cells
@@ -739,11 +739,11 @@ void setup()
 void loop()
 {
 
-  // LED heart beat an cycle time control
+  // LED heart beat and cycle time control
   // *********************************************************************************************************************************
   digitalWrite(ledPin, digitalRead(ledPin) ^ 1);   // toggle LED pin by XOR
   // regulation of cycle time because of intermediateAngle calculation  total cycletime should be approximately 250 ms
-  // For that count the LED blinks up to 20 and stop the time. It shuld be araound 10s. If not adjust the timer below.
+  // For this count the LED blinks up to 20 and stop the time. It shuld be araound 10s. If not adjust the timer below.
   delay(80); 
 
   // Read battery probe and check limit
@@ -862,30 +862,27 @@ void loop()
     distancefRightObstruction = (distancefRightCm < distancefRightLimit);// Obstruction detected front right
   }
   
-  digitalWrite(distancebLeftTrig, LOW);                               // back Left
-  delayMicroseconds(5);                                               // ****
-  digitalWrite(distancebLeftTrig, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(distancebLeftTrig, LOW);
-  distancebLeftPulseTime = pulseIn(distancebLeftEcho, HIGH);
-  if (distancebLeftPulseTime > 60) {                                  // disturbance filter
-    distancebLeftCm = distancebLeftPulseTime / 29 / 2;
-    distancebLeftObstruction = (distancebLeftCm < distancebLeftLimit);// Obstruction detected back left
-    if (distancebLeftCm > 10 && distancebLeftCm < 200 && alignCommand == true){
-            // activate regression calculation
-    } 
-  }
-  
-  digitalWrite(distancebRightTrig, LOW);                              // back Right
-  delayMicroseconds(5);                                               // *****
-  digitalWrite(distancebRightTrig, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(distancebRightTrig, LOW);
-  distancebRightPulseTime = pulseIn(distancebRightEcho, HIGH);
-  if (distancebRightPulseTime > 60) {                                  // disturbance filter
-    distancebRightCm = distancebRightPulseTime / 29 / 2;
-    distancebRightObstruction = (distancebRightCm < distancebRightLimit);// Obstruction detected back right
-  }
+//  digitalWrite(distancebLeftTrig, LOW);                               // back Left
+//  delayMicroseconds(5);                                               // ****
+//  digitalWrite(distancebLeftTrig, HIGH);
+//  delayMicroseconds(10);
+//  digitalWrite(distancebLeftTrig, LOW);
+//  distancebLeftPulseTime = pulseIn(distancebLeftEcho, HIGH);
+//  if (distancebLeftPulseTime > 60) {                                  // disturbance filter
+//    distancebLeftCm = distancebLeftPulseTime / 29 / 2;
+//    distancebLeftObstruction = (distancebLeftCm < distancebLeftLimit);// Obstruction detected back left
+//  }
+//  
+//  digitalWrite(distancebRightTrig, LOW);                              // back Right
+//  delayMicroseconds(5);                                               // *****
+//  digitalWrite(distancebRightTrig, HIGH);
+//  delayMicroseconds(10);
+//  digitalWrite(distancebRightTrig, LOW);
+//  distancebRightPulseTime = pulseIn(distancebRightEcho, HIGH);
+//  if (distancebRightPulseTime > 60) {                                  // disturbance filter
+//    distancebRightCm = distancebRightPulseTime / 29 / 2;
+//    distancebRightObstruction = (distancebRightCm < distancebRightLimit);// Obstruction detected back right
+//  }
   
   // Alignment
   // *********
@@ -961,13 +958,6 @@ void loop()
     }
   }
 
-
-  
-
- 
-
-  
-
   digitalWrite(distanceFrontTrig, LOW);                               // Front
   delayMicroseconds(5);                                               // *****
   digitalWrite(distanceFrontTrig, HIGH);
@@ -995,20 +985,13 @@ void loop()
   digitalWrite(distanceDownTrig, LOW);                                // Down
   delayMicroseconds(5);                                               // ****
   digitalWrite(distanceDownTrig, HIGH);
-  delayMicroseconds(10);
+  delayMicroseconds(20);
   digitalWrite(distanceDownTrig, LOW);
   distanceDownPulseTime = pulseIn(distanceDownEcho, HIGH);
-  distanceDownRawValue = analogRead(distanceDownProbe);               // Reading IR sensor
-                                                                      // Get a correct new distance  from US- and IR- sensor
-                                                                      // otherwise keep the old distance to kompensate short disturbances
   if (distanceDownPulseTime > 60) {                                   // disturbance filter
     distanceDownCm = distanceDownPulseTime / 29 / 2;
-  
-    if (distanceDownCm <= distanceDownLimit){
-      distanceDownCm = (5000 / (distanceDownRawValue - 20)) - 15;
-    }
+    distanceDownObstruction = (distanceDownCm > distanceDownLimit);   // Obstruction like down stair or table end detected
   }
-  distanceDownObstruction = (distanceDownCm > distanceDownLimit);     // Obstruction like down stair or table end detected
 
   // Build and execute emergency stop
   // *************************************************************************************************************************************
@@ -1323,15 +1306,19 @@ void loop()
   // Supervision of W-LAN Communication
   // *************************************************************************************************************************************
 
-  if (wlanReady == false) wlanReadyCount += 1;                                    // no wlanReady received since last cykle
+  if (wlanReady == false) { 
+      wlanReadyCount += 1;                                                            // no wlanReady received since last cycle
+      if (wlanReadyCount < 3) wlanDisturbance = false;                                // W-LAN ok
+      else {
+        wlanDisturbance = true;                                                       // W-LAN Disturbance
+        wlanReadyCount = 3;
+      }
+  }
   else {
-    wlanReady = false;  // wlanReady ok
+    // wlanReady ok
+    wlanReady = false;  
     wlanReadyCount = 0;
   }
-  if (wlanReadyCount < 3) wlanDisturbance = false;                                // W-LAN ok
-  else {
-    wlanDisturbance = true;  // W-LAN Disturbance
-    wlanReadyCount = 3;
-  }
+
 }
 
