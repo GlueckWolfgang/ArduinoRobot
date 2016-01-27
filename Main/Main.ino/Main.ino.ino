@@ -1,7 +1,7 @@
 
 //****************************************************************************************************************************************************
 // *** Arduino robot program
-// *** Version: 2016.01.26
+// *** Version: 2016.01.27
 // *** Developer: Wolfgang Glück
 // ***
 // *** Supported hardware:
@@ -11,8 +11,8 @@
 // ***   - Motor control Board (MCB) for 2 motors and encoders      (optional)
 // ***   - Arduino mega                                             (Spider)
 // ***   - Compass                                                  (CMPS11 via 10cm I2C bus, using internal pullups by default)
-// ***   - 7 x Ultra-sonic sensor                                   (US-015)
-// ***   - 1 x Infra red Sensor (not in use)                        (Sharp 2Y0A21)
+// ***   - 6 x Ultra-sonic sensor                                   (US-015)
+// ***   - 1 x Infra red Sensor                                     (Sharp 2Y0A21)
 // ***   - 7,2 V Battery for MCB and drives                         (6x 1,2 V NiMH Akku type D 10'000 mAh, same battery pack as for 9,6 V)
 // ***   - 9,6 V Battery for Arduino and MCB                        (8x 1,2 V NiMH Akku type D 10'000 mAh)
 // ***   - Battery holder for 8 type D cells
@@ -604,10 +604,7 @@ int distanceFrontPulseTime = 0;
 int distanceFrontCm = 0;
 boolean distanceFrontObstruction = false;
 
-#define distanceDownEcho 40
-#define distanceDownTrig 41
 #define distanceDownLimit 15
-int distanceDownPulseTime = 0;
 int distanceDownCm = 0;
 boolean distanceDownObstruction = false;
 
@@ -669,7 +666,6 @@ void setup()
   pinMode(distancebLeftTrig, OUTPUT);
   pinMode(distancebRightTrig, OUTPUT);
   pinMode(distanceFrontTrig, OUTPUT);
-  pinMode(distanceDownTrig, OUTPUT);
   pinMode(distanceUpTrig, OUTPUT);
   pinMode(motor1Direction, OUTPUT);
   pinMode(motor2Direction, OUTPUT);
@@ -742,10 +738,8 @@ void loop()
   // LED heart beat and cycle time control
   // *********************************************************************************************************************************
   digitalWrite(ledPin, digitalRead(ledPin) ^ 1);   // toggle LED pin by XOR
-  // regulation of cycle time because of intermediateAngle calculation  total cycletime should be approximately 250 ms
-  // For this count the LED blinks up to 20 and stop the time. It shuld be araound 10s. If not adjust the timer below.
-  delay(80); 
-
+  // regulation of cycle time because of intermediateAngle calculation  total cycletime should be <= 500 ms
+ 
   // Read battery probe and check limit
   // *********************************************************************************************************************************
   battery9VRawValue = analogRead(battery9VProbe);
@@ -844,45 +838,57 @@ void loop()
   digitalWrite(distancefLeftTrig, HIGH);
   delayMicroseconds(10);
   digitalWrite(distancefLeftTrig, LOW);
-  distancefLeftPulseTime = pulseIn(distancefLeftEcho, HIGH);
+  distancefLeftPulseTime = pulseIn(distancefLeftEcho, HIGH, 12000);    // Range limited to 200cm (timeout delivers 0)
   if (distancefLeftPulseTime > 60) {                                  // disturbance filter
     distancefLeftCm = distancefLeftPulseTime / 29 / 2;
-    distancefLeftObstruction = (distancefLeftCm < distancefLeftLimit);  // Obstruction detected front left
   }
-  
+  else { 
+    distancefLeftCm = 210;                                            // out of range
+  }
+  distancefLeftObstruction = (distancefLeftCm < distancefLeftLimit);  // Obstruction detected front left
 
   digitalWrite(distancefRightTrig, LOW);                              // front Right
   delayMicroseconds(5);                                               // *****
   digitalWrite(distancefRightTrig, HIGH);
   delayMicroseconds(10);
   digitalWrite(distancefRightTrig, LOW);
-  distancefRightPulseTime = pulseIn(distancefRightEcho, HIGH);
+  distancefRightPulseTime = pulseIn(distancefRightEcho, HIGH, 12000);  // Range limited to 200cm
   if (distancefRightPulseTime > 60) {                                  // disturbance filter
     distancefRightCm = distancefRightPulseTime / 29 / 2;
-    distancefRightObstruction = (distancefRightCm < distancefRightLimit);// Obstruction detected front right
   }
+  else {
+    distancefRightCm = 210;                                            // out of range
+  }
+  distancefRightObstruction = (distancefRightCm < distancefRightLimit);// Obstruction detected front right
+  
   
 //  digitalWrite(distancebLeftTrig, LOW);                               // back Left
 //  delayMicroseconds(5);                                               // ****
 //  digitalWrite(distancebLeftTrig, HIGH);
 //  delayMicroseconds(10);
 //  digitalWrite(distancebLeftTrig, LOW);
-//  distancebLeftPulseTime = pulseIn(distancebLeftEcho, HIGH);
+//  distancebLeftPulseTime = pulseIn(distancebLeftEcho, HIGH, 12000);
 //  if (distancebLeftPulseTime > 60) {                                  // disturbance filter
 //    distancebLeftCm = distancebLeftPulseTime / 29 / 2;
-//    distancebLeftObstruction = (distancebLeftCm < distancebLeftLimit);// Obstruction detected back left
 //  }
+//  else {
+//    distancebLeftCm = 210;                                            // out of range
+//  }
+//  distancebLeftObstruction = (distancebLeftCm < distancebLeftLimit);// Obstruction detected back left
 //  
 //  digitalWrite(distancebRightTrig, LOW);                              // back Right
 //  delayMicroseconds(5);                                               // *****
 //  digitalWrite(distancebRightTrig, HIGH);
 //  delayMicroseconds(10);
 //  digitalWrite(distancebRightTrig, LOW);
-//  distancebRightPulseTime = pulseIn(distancebRightEcho, HIGH);
-//  if (distancebRightPulseTime > 60) {                                  // disturbance filter
+//  distancebRightPulseTime = pulseIn(distancebRightEcho, HIGH, 12000);
+//  if (distancebRightPulseTime > 60) {                                 // disturbance filter
 //    distancebRightCm = distancebRightPulseTime / 29 / 2;
-//    distancebRightObstruction = (distancebRightCm < distancebRightLimit);// Obstruction detected back right
 //  }
+//  else {
+//    distancebRightCm = 210;                                           // out of range
+//  }
+//  distancebRightObstruction = (distancebRightCm < distancebRightLimit);// Obstruction detected back right
   
   // Alignment
   // *********
@@ -963,35 +969,35 @@ void loop()
   digitalWrite(distanceFrontTrig, HIGH);
   delayMicroseconds(10);
   digitalWrite(distanceFrontTrig, LOW);
-  distanceFrontPulseTime = pulseIn(distanceFrontEcho, HIGH);
+  distanceFrontPulseTime = pulseIn(distanceFrontEcho, HIGH, 12000);    // Range limited to 200cm
   if (distanceFrontPulseTime > 60) {                                  // disturbance filter
     distanceFrontCm = distanceFrontPulseTime / 29 / 2;
-    distanceFrontObstruction = (distanceFrontCm < distanceFrontLimit);// Obstruction detected front side
   }
-  
+  else {
+    distanceFrontCm = 210;                                            // out of range
+  }
+  distanceFrontObstruction = (distanceFrontCm < distanceFrontLimit);// Obstruction detected front side
 
   digitalWrite(distanceUpTrig, LOW);                                  // Up
   delayMicroseconds(5);                                               // **
   digitalWrite(distanceUpTrig, HIGH);
   delayMicroseconds(10);
   digitalWrite(distanceUpTrig, LOW);
-  distanceUpPulseTime = pulseIn(distanceUpEcho, HIGH);
+  distanceUpPulseTime = pulseIn(distanceUpEcho, HIGH, 17000);         // Range limited to 300cm
   if (distanceUpPulseTime > 60) {                                     // disturbance filter
     distanceUpCm = distanceUpPulseTime / 29 / 2;
-    distanceUpDoor = (distanceUpCm < distanceUpLimit);                // Door passing
   }
-  
+  else {
+    distanceUpCm = 310;                                               // out of range
+  }
+  distanceUpDoor = (distanceUpCm < distanceUpLimit);                  // Door passing
 
-  digitalWrite(distanceDownTrig, LOW);                                // Down
-  delayMicroseconds(5);                                               // ****
-  digitalWrite(distanceDownTrig, HIGH);
-  delayMicroseconds(20);
-  digitalWrite(distanceDownTrig, LOW);
-  distanceDownPulseTime = pulseIn(distanceDownEcho, HIGH);
-  if (distanceDownPulseTime > 60) {                                   // disturbance filter
-    distanceDownCm = distanceDownPulseTime / 29 / 2;
-    distanceDownObstruction = (distanceDownCm > distanceDownLimit);   // Obstruction like down stair or table end detected
-  }
+                                                                      // Down
+                                                                      // ****
+
+  distanceDownRawValue = analogRead(distanceDownProbe);               // Read IR sensor
+  distanceDownCm = (4800 / (distanceDownRawValue - 20));           
+  distanceDownObstruction = (distanceDownCm > distanceDownLimit);     // Obstruction detected
 
   // Build and execute emergency stop
   // *************************************************************************************************************************************
@@ -1023,8 +1029,8 @@ void loop()
     // Send values to USB interface
     // *************************************************************************************************************************************
   
-    Serial.print ("MV@Version: V ");
-    Serial.println(ARDUINO);
+//    Serial.print ("MV@Version: V ");
+//    Serial.println(ARDUINO);
   
     Serial.print("MV@EncLt: V ");
     Serial.println(encLt, DEC);
@@ -1158,11 +1164,6 @@ void loop()
     Serial.println(distanceUpCm);
     Serial.print("MV@Distance up: LL ");
     Serial.println(distanceUpLimit);
-  
-    // Serial.print("MV@Distance down raw value: "); // For test reasons only
-    // Serial.println(distanceDownRawValue);         // For test reasons only
-    // Serial.print("MV@Distance down pulse time: ");// For test reasons only
-    // Serial.println(distanceDownPulseTime);        // For test reasons only
     
     Serial.print("MV@Distance down: V ");
     Serial.println(distanceDownCm);
@@ -1176,32 +1177,39 @@ void loop()
   
     Serial.print("S@Turn finished: ");
     Serial.println(turnFinished);
-    Serial.print("S@Stop: ");
-    Serial.println(forwardStopCommand);
     
     Serial.print("S@W-LAN disturbance: ");
     Serial.println(wlanDisturbance);
     
     Serial.print("S@Emergency stop: ");
     Serial.println(emergencyStop);
-    Serial.print("S@Forward slow: ");
-    Serial.println(forwardSlowCommand);
-    Serial.print("S@Forward half: ");
-    Serial.println(forwardHalfCommand);
-    Serial.print("S@Forward full: ");
-    Serial.println(forwardFullCommand);
-    Serial.print("S@Steering left: ");
-    Serial.println(steeringLeftCommand);
-    Serial.print("S@Steering right: ");
-    Serial.println(steeringRightCommand);
-    Serial.print("S@Turn slow 45 left: ");
-    Serial.println(turnSlow45LeftCommand);
-    Serial.print("S@Turn slow 45 right: ");
-    Serial.println(turnSlow45RightCommand);
-    Serial.print("S@Turn slow 90 left: ");
-    Serial.println(turnSlow90LeftCommand);
-    Serial.print("S@Turn slow 90 right: ");
-    Serial.println(turnSlow90RightCommand);
+    
+//    Serial.print("S@Stop: ");
+//    Serial.println(forwardStopCommand);
+//    
+//    Serial.print("S@Forward slow: ");
+//    Serial.println(forwardSlowCommand);
+//    Serial.print("S@Forward half: ");
+//    Serial.println(forwardHalfCommand);
+//    Serial.print("S@Forward full: ");
+//    Serial.println(forwardFullCommand);
+//    Serial.print("S@Steering left: ");
+//    Serial.println(steeringLeftCommand);
+//    Serial.print("S@Steering right: ");
+//    Serial.println(steeringRightCommand);
+//    Serial.print("S@Turn slow 45 left: ");
+//    Serial.println(turnSlow45LeftCommand);
+//    Serial.print("S@Turn slow 45 right: ");
+//    Serial.println(turnSlow45RightCommand);
+//    Serial.print("S@Turn slow 90 left: ");
+//    Serial.println(turnSlow90LeftCommand);
+//    Serial.print("S@Turn slow 90 right: ");
+//    Serial.println(turnSlow90RightCommand);
+    
+//    Serial.print("MV@Distance down raw value: "); // For test reasons only
+//    Serial.println(distanceDownRawValue);         // For test reasons only
+//    Serial.print("MV@Distance down pulse time: ");// For test reasons only
+//    Serial.println(distanceDownPulseTime);        // For test reasons only
     
 //    Serial.print("S@TestPoint1: ");         // for testing set e.g. testPoint1 = 1; and read it in the datastream on your PC
 //    Serial.println(testPoint1);
@@ -1211,7 +1219,7 @@ void loop()
 //    Serial.println(testPoint3);
 //    Serial.print("I@Command: ");
 //    Serial.println(CommandStringS);
-    Serial.flush();
+//    Serial.flush();
   
     // Get command from USB interface
     // *************************************************************************************************************************************
@@ -1286,7 +1294,7 @@ void loop()
       }
       if (CommandString.startsWith("WlanReady")) wlanReady = true;                    // Live beat of W-LAN communication
       if (CommandString.startsWith("EncoderReset")) {
-        encLt = 0;  // Encoder reset
+        encLt = 0;                                                                    // Encoder reset
         encRt = 0;
       }
       if (CommandString.startsWith("Amplifier: ")){                                   // Amplifier 0/1
@@ -1296,11 +1304,11 @@ void loop()
     }
   }
   else {usbDisturbance = true;                                                        // USB disturbance
-  Serial.flush();
+//  Serial.flush();
   Serial.end();
   Serial.begin(baud);
   Serial.setTimeout(10);
-  delay(1000);                                                                         // wait for next trial
+  delay(2000);                                                                        // wait for next trial
   }
 
   // Supervision of W-LAN Communication
