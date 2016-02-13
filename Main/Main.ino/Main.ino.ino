@@ -691,52 +691,52 @@ void setup()
 
   // send static values
   // ************************************************************************************************************
-  if (not Serial) {
+  while (not Serial) {
     Serial.end();
     Serial.begin(baud);
     Serial.setTimeout(10);
     delay(2000);
   }
-  else {    
-    Serial.print("MV@Battery 9V: LL ");
-    Serial.println(battery9VLowerLimit);
-    Serial.print("MV@Battery 7V: LL ");
-    Serial.println(battery7VLowerLimit);  
-    Serial.print("MV@Battery 5V: LL ");
-    Serial.println(battery5VLowerLimit);    
-    Serial.print("MV@Arduino 5V: LL ");
-    Serial.println(Arduino5VLowerLimit);
-    Serial.print("MV@Motor1 current: UL ");
-    Serial.println(motorStallLimit);
-    Serial.print("MV@Motor2 current: UL ");
-    Serial.println(motorStallLimit);
-    Serial.print("MV@Motor3 current: UL ");
-    Serial.println(motorStallLimit);
-    Serial.print("MV@Motor4 current: UL ");
-    Serial.println(motorStallLimit);
-    Serial.print("MV@Roll: UL ");
-    Serial.println(UrollLimit, DEC);
-    Serial.print("MV@Roll: LL ");
-    Serial.println(LrollLimit, DEC);
-    Serial.print("MV@Pitch: UL ");
-    Serial.println(UpitchLimit, DEC);
-    Serial.print("MV@Pitch: LL ");
-    Serial.println(LpitchLimit, DEC);
-    Serial.print("MV@Distance fleft: LL ");
-    Serial.println(distancefLeftLimit);
-    Serial.print("MV@Distance fright: LL ");
-    Serial.println(distancefRightLimit);
-    Serial.print("MV@Distance bleft: LL ");
-    Serial.println(distancebLeftLimit);    
-    Serial.print("MV@Distance bright: LL ");
-    Serial.println(distancebRightLimit);
-    Serial.print("MV@Distance front: LL ");
-    Serial.println(distanceFrontLimit);
-    Serial.print("MV@Distance up: LL ");
-    Serial.println(distanceUpLimit);
-    Serial.print("MV@Distance down: UL ");
-    Serial.println(distanceDownLimit);
-  }
+   
+  Serial.print("MV@Battery 9V: LL ");
+  Serial.println(battery9VLowerLimit);
+  Serial.print("MV@Battery 7V: LL ");
+  Serial.println(battery7VLowerLimit);  
+  Serial.print("MV@Battery 5V: LL ");
+  Serial.println(battery5VLowerLimit);    
+  Serial.print("MV@Arduino 5V: LL ");
+  Serial.println(Arduino5VLowerLimit);
+  Serial.print("MV@Motor1 current: UL ");
+  Serial.println(motorStallLimit);
+  Serial.print("MV@Motor2 current: UL ");
+  Serial.println(motorStallLimit);
+  Serial.print("MV@Motor3 current: UL ");
+  Serial.println(motorStallLimit);
+  Serial.print("MV@Motor4 current: UL ");
+  Serial.println(motorStallLimit);
+  Serial.print("MV@Roll: UL ");
+  Serial.println(UrollLimit, DEC);
+  Serial.print("MV@Roll: LL ");
+  Serial.println(LrollLimit, DEC);
+  Serial.print("MV@Pitch: UL ");
+  Serial.println(UpitchLimit, DEC);
+  Serial.print("MV@Pitch: LL ");
+  Serial.println(LpitchLimit, DEC);
+  Serial.print("MV@Distance fleft: LL ");
+  Serial.println(distancefLeftLimit);
+  Serial.print("MV@Distance fright: LL ");
+  Serial.println(distancefRightLimit);
+  Serial.print("MV@Distance bleft: LL ");
+  Serial.println(distancebLeftLimit);    
+  Serial.print("MV@Distance bright: LL ");
+  Serial.println(distancebRightLimit);
+  Serial.print("MV@Distance front: LL ");
+  Serial.println(distanceFrontLimit);
+  Serial.print("MV@Distance up: LL ");
+  Serial.println(distanceUpLimit);
+  Serial.print("MV@Distance down: UL ");
+  Serial.println(distanceDownLimit);
+
 
   // Calibration
   // ************************************************************************************************************
