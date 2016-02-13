@@ -1,7 +1,7 @@
 
 //****************************************************************************************************************************************************
 // *** Arduino robot program
-// *** Version: 2016.01.27
+// *** Version: 2016.02.13
 // *** Developer: Wolfgang Glück
 // ***
 // *** Supported hardware:
@@ -689,6 +689,55 @@ void setup()
   // ************************************************************************************************************
   QuadratureEncoderInit();
 
+  // send static values
+  // ************************************************************************************************************
+  if (not Serial) {
+    Serial.end();
+    Serial.begin(baud);
+    Serial.setTimeout(10);
+    delay(2000);
+  }
+  else {    
+    Serial.print("MV@Battery 9V: LL ");
+    Serial.println(battery9VLowerLimit);
+    Serial.print("MV@Battery 7V: LL ");
+    Serial.println(battery7VLowerLimit);  
+    Serial.print("MV@Battery 5V: LL ");
+    Serial.println(battery5VLowerLimit);    
+    Serial.print("MV@Arduino 5V: LL ");
+    Serial.println(Arduino5VLowerLimit);
+    Serial.print("MV@Motor1 current: UL ");
+    Serial.println(motorStallLimit);
+    Serial.print("MV@Motor2 current: UL ");
+    Serial.println(motorStallLimit);
+    Serial.print("MV@Motor3 current: UL ");
+    Serial.println(motorStallLimit);
+    Serial.print("MV@Motor4 current: UL ");
+    Serial.println(motorStallLimit);
+    Serial.print("MV@Roll: UL ");
+    Serial.println(UrollLimit, DEC);
+    Serial.print("MV@Roll: LL ");
+    Serial.println(LrollLimit, DEC);
+    Serial.print("MV@Pitch: UL ");
+    Serial.println(UpitchLimit, DEC);
+    Serial.print("MV@Pitch: LL ");
+    Serial.println(LpitchLimit, DEC);
+    Serial.print("MV@Distance fleft: LL ");
+    Serial.println(distancefLeftLimit);
+    Serial.print("MV@Distance fright: LL ");
+    Serial.println(distancefRightLimit);
+    Serial.print("MV@Distance bleft: LL ");
+    Serial.println(distancebLeftLimit);    
+    Serial.print("MV@Distance bright: LL ");
+    Serial.println(distancebRightLimit);
+    Serial.print("MV@Distance front: LL ");
+    Serial.println(distanceFrontLimit);
+    Serial.print("MV@Distance up: LL ");
+    Serial.println(distanceUpLimit);
+    Serial.print("MV@Distance down: UL ");
+    Serial.println(distanceDownLimit);
+  }
+
   // Calibration
   // ************************************************************************************************************
   // Initiate calibration
@@ -1022,15 +1071,30 @@ void loop()
 
   MotorControl();
 
+
+  // Supervision of W-LAN Communication
+  // *************************************************************************************************************************************
+
+  if (wlanReady == false) { 
+      wlanReadyCount += 1;                                                            // no wlanReady received since last cycle
+      if (wlanReadyCount < 3) wlanDisturbance = false;                                // W-LAN ok
+      else {
+        wlanDisturbance = true;                                                       // W-LAN Disturbance
+        wlanReadyCount = 3;
+      }
+  }
+  else {
+    // wlanReady ok
+    wlanReady = false;  
+    wlanReadyCount = 0;
+  }
+
   // check serial interface
   // *************************************************************************************************************************************
   if (Serial) { usbDisturbance = false;                                            // USB ok
 
     // Send values to USB interface
     // *************************************************************************************************************************************
-  
-//    Serial.print ("MV@Version: V ");
-//    Serial.println(ARDUINO);
   
     Serial.print("MV@EncLt: V ");
     Serial.println(encLt, DEC);
@@ -1039,55 +1103,39 @@ void loop()
   
     Serial.print("MV@Battery 9V: V ");
     Serial.println(battery9VFinalValue);
-    Serial.print("MV@Battery 9V: LL ");
-    Serial.println(battery9VLowerLimit);
     Serial.print("MV@Battery 9V: LL_Exceeded ");
     Serial.println(battery9VLow);
   
     Serial.print("MV@Battery 7V: V ");
     Serial.println(battery7VFinalValue);
-    Serial.print("MV@Battery 7V: LL ");
-    Serial.println(battery7VLowerLimit);
     Serial.print("MV@Battery 7V: LL_Exceeded ");
     Serial.println(battery7VLow);
   
     Serial.print("MV@Battery 5V: V ");
     Serial.println(battery5VFinalValue);
-    Serial.print("MV@Battery 5V: LL ");
-    Serial.println(battery5VLowerLimit);
     Serial.print("MV@Battery 5V: LL_Exceeded ");
     Serial.println(battery5VLow);
   
     Serial.print("MV@Arduino 5V: V ");
     Serial.println(Arduino5VFinalValue);
-    Serial.print("MV@Arduino 5V: LL ");
-    Serial.println(Arduino5VLowerLimit);
     Serial.print("MV@Arduino 5V: LL_Exceeded ");
     Serial.println(Arduino5VLow);
   
-    Serial.print("MV@Motor1 current: UL ");
-    Serial.println(motorStallLimit);
     Serial.print("MV@Motor1 current: V ");
     Serial.println (motor1FinalValue);
     Serial.print("MV@Motor1 current: UL_Exceeded ");
     Serial.println(motor1Stall);
   
-    Serial.print("MV@Motor2 current: UL ");
-    Serial.println(motorStallLimit);
     Serial.print("MV@Motor2 current: V ");
     Serial.println(motor2FinalValue);
     Serial.print("MV@Motor2 current: UL_Exceeded ");
     Serial.println(motor2Stall);
   
-    Serial.print("MV@Motor3 current: UL ");
-    Serial.println(motorStallLimit);
     Serial.print("MV@Motor3 current: V ");
     Serial.println(motor3FinalValue);
     Serial.print("MV@Motor3 current: UL_Exceeded ");
     Serial.println(motor3Stall);
   
-    Serial.print("MV@Motor4 current: UL ");
-    Serial.println(motorStallLimit);
     Serial.print("MV@Motor4 current: V ");
     Serial.println(motor4FinalValue);
     Serial.print("MV@Motor4 current: UL_Exceeded ");
@@ -1095,23 +1143,15 @@ void loop()
 
     Serial.print("MV@Roll: V ");
     Serial.println(roll, DEC);
-    Serial.print("MV@Roll: UL ");
-    Serial.println(UrollLimit, DEC);
     Serial.print("MV@Roll: UL_Exceeded ");
     Serial.println(UrollLimitExceeded);
-    Serial.print("MV@Roll: LL ");
-    Serial.println(LrollLimit, DEC);
     Serial.print("MV@Roll: LL_Exceeded ");
     Serial.println(LrollLimitExceeded);
   
     Serial.print("MV@Pitch: V ");
     Serial.println(pitch, DEC);
-    Serial.print("MV@Pitch: UL ");
-    Serial.println(UpitchLimit, DEC);
     Serial.print("MV@Pitch: UL_Exceeded ");
     Serial.println(UpitchLimitExceeded);
-    Serial.print("MV@Pitch: LL ");
-    Serial.println(LpitchLimit, DEC);
     Serial.print("MV@Pitch: LL_Exceeded ");
     Serial.println(LpitchLimitExceeded);
   
@@ -1127,48 +1167,34 @@ void loop()
   
     Serial.print("MV@Distance fleft: V ");
     Serial.println(distancefLeftCm);
-    Serial.print("MV@Distance fleft: LL ");
-    Serial.println(distancefLeftLimit);
     Serial.print("MV@Distance fleft: LL_Exceeded ");
     Serial.println(distancefLeftObstruction);
   
     Serial.print("MV@Distance fright: V ");
     Serial.println(distancefRightCm);
-    Serial.print("MV@Distance fright: LL ");
-    Serial.println(distancefRightLimit);
     Serial.print("MV@Distance fright: LL_Exceeded ");
     Serial.println(distancefRightObstruction);
 
     Serial.print("MV@Distance bleft: V ");
     Serial.println(distancebLeftCm);
-    Serial.print("MV@Distance bleft: LL ");
-    Serial.println(distancebLeftLimit);
     Serial.print("MV@Distance bleft: LL_Exceeded ");
     Serial.println(distancebLeftObstruction);
   
     Serial.print("MV@Distance bright: V ");
     Serial.println(distancebRightCm);
-    Serial.print("MV@Distance bright: LL ");
-    Serial.println(distancebRightLimit);
     Serial.print("MV@Distance bright: LL_Exceeded ");
     Serial.println(distancebRightObstruction);
   
     Serial.print("MV@Distance front: V ");
     Serial.println(distanceFrontCm);
-    Serial.print("MV@Distance front: LL ");
-    Serial.println(distanceFrontLimit);
     Serial.print("MV@Distance front: LL_Exceeded ");
     Serial.println(distanceFrontObstruction);
   
     Serial.print("MV@Distance up: V ");
     Serial.println(distanceUpCm);
-    Serial.print("MV@Distance up: LL ");
-    Serial.println(distanceUpLimit);
     
     Serial.print("MV@Distance down: V ");
     Serial.println(distanceDownCm);
-    Serial.print("MV@Distance down: UL ");
-    Serial.println(distanceDownLimit);
     Serial.print("MV@Distance down: UL_Exceeded ");
     Serial.println(distanceDownObstruction);
   
@@ -1183,6 +1209,9 @@ void loop()
     
     Serial.print("S@Emergency stop: ");
     Serial.println(emergencyStop);
+
+//    Serial.print ("MV@Version: V ");
+//    Serial.println(ARDUINO);
     
 //    Serial.print("S@Stop: ");
 //    Serial.println(forwardStopCommand);
@@ -1219,7 +1248,6 @@ void loop()
 //    Serial.println(testPoint3);
 //    Serial.print("I@Command: ");
 //    Serial.println(CommandStringS);
-//    Serial.flush();
   
     // Get command from USB interface
     // *************************************************************************************************************************************
@@ -1304,28 +1332,10 @@ void loop()
     }
   }
   else {usbDisturbance = true;                                                        // USB disturbance
-//  Serial.flush();
   Serial.end();
   Serial.begin(baud);
   Serial.setTimeout(10);
   delay(2000);                                                                        // wait for next trial
-  }
-
-  // Supervision of W-LAN Communication
-  // *************************************************************************************************************************************
-
-  if (wlanReady == false) { 
-      wlanReadyCount += 1;                                                            // no wlanReady received since last cycle
-      if (wlanReadyCount < 3) wlanDisturbance = false;                                // W-LAN ok
-      else {
-        wlanDisturbance = true;                                                       // W-LAN Disturbance
-        wlanReadyCount = 3;
-      }
-  }
-  else {
-    // wlanReady ok
-    wlanReady = false;  
-    wlanReadyCount = 0;
   }
 
 }
