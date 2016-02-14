@@ -697,7 +697,8 @@ void setup()
     Serial.setTimeout(10);
     delay(2000);
   }
-   
+   Serial.print ("MV@Version: V ");
+  Serial.println(ARDUINO); 
   Serial.print("MV@Battery 9V: LL ");
   Serial.println(battery9VLowerLimit);
   Serial.print("MV@Battery 7V: LL ");
@@ -736,6 +737,7 @@ void setup()
   Serial.println(distanceUpLimit);
   Serial.print("MV@Distance down: UL ");
   Serial.println(distanceDownLimit);
+
 
 
   // Calibration
@@ -1200,6 +1202,12 @@ void loop()
   
     Serial.print("MV@Turned angle: V ");
     Serial.println(turnedAngle);
+
+    Serial.print("S@Compass: ");
+    Serial.println(digitalRead(CMPS11_VCC));
+
+    Serial.print("S@Amplifier: ");
+    Serial.println(digitalRead(amplifier_VCC));
   
     Serial.print("S@Turn finished: ");
     Serial.println(turnFinished);
@@ -1210,30 +1218,29 @@ void loop()
     Serial.print("S@Emergency stop: ");
     Serial.println(emergencyStop);
 
-//    Serial.print ("MV@Version: V ");
-//    Serial.println(ARDUINO);
+
     
-//    Serial.print("S@Stop: ");
-//    Serial.println(forwardStopCommand);
-//    
-//    Serial.print("S@Forward slow: ");
-//    Serial.println(forwardSlowCommand);
-//    Serial.print("S@Forward half: ");
-//    Serial.println(forwardHalfCommand);
-//    Serial.print("S@Forward full: ");
-//    Serial.println(forwardFullCommand);
-//    Serial.print("S@Steering left: ");
-//    Serial.println(steeringLeftCommand);
-//    Serial.print("S@Steering right: ");
-//    Serial.println(steeringRightCommand);
-//    Serial.print("S@Turn slow 45 left: ");
-//    Serial.println(turnSlow45LeftCommand);
-//    Serial.print("S@Turn slow 45 right: ");
-//    Serial.println(turnSlow45RightCommand);
-//    Serial.print("S@Turn slow 90 left: ");
-//    Serial.println(turnSlow90LeftCommand);
-//    Serial.print("S@Turn slow 90 right: ");
-//    Serial.println(turnSlow90RightCommand);
+    Serial.print("S@Stop: ");
+    Serial.println(forwardStopCommand);
+    
+    Serial.print("S@Forward slow: ");
+    Serial.println(forwardSlowCommand);
+    Serial.print("S@Forward half: ");
+    Serial.println(forwardHalfCommand);
+    Serial.print("S@Forward full: ");
+    Serial.println(forwardFullCommand);
+    Serial.print("S@Steering left: ");
+    Serial.println(steeringLeftCommand);
+    Serial.print("S@Steering right: ");
+    Serial.println(steeringRightCommand);
+    Serial.print("S@Turn slow 45 left: ");
+    Serial.println(turnSlow45LeftCommand);
+    Serial.print("S@Turn slow 45 right: ");
+    Serial.println(turnSlow45RightCommand);
+    Serial.print("S@Turn slow 90 left: ");
+    Serial.println(turnSlow90LeftCommand);
+    Serial.print("S@Turn slow 90 right: ");
+    Serial.println(turnSlow90RightCommand);
     
 //    Serial.print("MV@Distance down raw value: "); // For test reasons only
 //    Serial.println(distanceDownRawValue);         // For test reasons only
