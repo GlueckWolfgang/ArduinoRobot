@@ -1221,8 +1221,7 @@ void loop()
 
     
     Serial.print("S@Stop: ");
-    Serial.println(forwardStopCommand);
-    
+    Serial.println(forwardStopCommand);  
     Serial.print("S@Forward slow: ");
     Serial.println(forwardSlowCommand);
     Serial.print("S@Forward half: ");
@@ -1241,6 +1240,8 @@ void loop()
     Serial.println(turnSlow90LeftCommand);
     Serial.print("S@Turn slow 90 right: ");
     Serial.println(turnSlow90RightCommand);
+    Serial.print("S@Align: ");
+    Serial.println(alignCommand);
     
 //    Serial.print("MV@Distance down raw value: "); // For test reasons only
 //    Serial.println(distanceDownRawValue);         // For test reasons only
