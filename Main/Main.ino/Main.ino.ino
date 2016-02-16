@@ -1,7 +1,7 @@
 
 //****************************************************************************************************************************************************
 // *** Arduino robot program
-// *** Version: 2016.02.13
+// *** Version: 2016.02.16
 // *** Developer: Wolfgang Glück
 // ***
 // *** Supported hardware:
@@ -1055,11 +1055,11 @@ void loop()
 
   if (emergencyStop == false) {                                       // keep emergency stop stored until manually reset
     emergencyStop =  battery9VLow || battery7VLow || battery5VLow  || Arduino5VLow
-                     || distancefRightObstruction  || distancefLeftObstruction  || distanceFrontObstruction  || distanceDownObstruction
+                     || distancefRightObstruction  || distancefLeftObstruction  || distanceFrontObstruction  
                      || motor1Stall  || motor2Stall  || motor3Stall  || motor4Stall  
                      || UpitchLimitExceeded  || LpitchLimitExceeded || UrollLimitExceeded  || LrollLimitExceeded
                      || usbDisturbance;
-//                     || wlanDisturbance;
+//                     || distanceDownObstruction || wlanDisturbance;
   }
 
 
@@ -1269,17 +1269,17 @@ void loop()
       if (CommandString.startsWith("Stop")) {forwardStopCommand = true;
       }
       
-      if (CommandString.startsWith("ForwardSlow")) {
+      if (CommandString.startsWith("Forward slow")) {
         forwardStopCommand = false; forwardSlowCommand = true; forwardHalfCommand = false; forwardFullCommand = false;
         turnSlow45LeftCommand = false; turnSlow45RightCommand = false;
         turnSlow90LeftCommand = false; turnSlow90RightCommand = false; turnFinished = true;
       }
-      if (CommandString.startsWith("ForwardHalf")) {
+      if (CommandString.startsWith("Forward half")) {
         forwardStopCommand = false; forwardHalfCommand = true; forwardSlowCommand = false; forwardFullCommand = false;
         turnSlow45LeftCommand = false; turnSlow45RightCommand = false;
         turnSlow90LeftCommand = false; turnSlow90RightCommand = false; turnFinished = true;
       }
-      if (CommandString.startsWith("ForwardFull")) {
+      if (CommandString.startsWith("Forward full")) {
         forwardStopCommand = false; forwardFullCommand = true; forwardSlowCommand = false; forwardHalfCommand = false;
         turnSlow45LeftCommand = false; turnSlow45RightCommand = false;
         turnSlow90LeftCommand = false; turnSlow90RightCommand = false; turnFinished = true;
@@ -1292,44 +1292,44 @@ void loop()
         steeringRightCommand = false;
         }
         
-      if (CommandString.startsWith("SteeringLeft"))  {
+      if (CommandString.startsWith("Steering left"))  {
         steeringLeftCommand = true;
         steeringRightCommand = false;
         alignCommand = false;
       }
-      if (CommandString.startsWith("SteeringRight")) {
+      if (CommandString.startsWith("Steering right")) {
         steeringLeftCommand = false;
         steeringRightCommand = true;
         alignCommand = false;
       }
-      if (CommandString.startsWith("SteeringAhead")) {
+      if (CommandString.startsWith("Steering ahead")) {
         steeringLeftCommand = false;
         steeringRightCommand = false;
         alignCommand = false;
       }
-      if (CommandString.startsWith("TurnSlow45Left")) {
+      if (CommandString.startsWith("Turn slow 45 left")) {
         turnSlow45LeftCommand = true;
         forwardStopCommand = false; forwardSlowCommand = false; forwardHalfCommand = false; forwardFullCommand = false;
         steeringLeftCommand = false; steeringRightCommand = false; alignCommand = false;
       }
   
-      if (CommandString.startsWith("TurnSlow45Right")) {
+      if (CommandString.startsWith("Turn slow 45 right")) {
         turnSlow45RightCommand = true;
         forwardStopCommand = false; forwardSlowCommand = false; forwardHalfCommand = false; forwardFullCommand = false;
         steeringLeftCommand = false; steeringRightCommand = false; alignCommand = false;
       }
-      if (CommandString.startsWith("TurnSlow90Left")) {
+      if (CommandString.startsWith("Turn slow 90 left")) {
         turnSlow90LeftCommand = true;
         forwardStopCommand = false; forwardSlowCommand = false; forwardHalfCommand = false; forwardFullCommand = false;
         steeringLeftCommand = false; steeringRightCommand = false; alignCommand = false;
       }
-      if (CommandString.startsWith("TurnSlow90Right")) {
+      if (CommandString.startsWith("Turn slow 90 right")) {
         turnSlow90RightCommand = true;
         forwardStopCommand = false; forwardSlowCommand = false; forwardHalfCommand = false; forwardFullCommand = false;
         steeringLeftCommand = false; steeringRightCommand = false; alignCommand = false;
       }
-      if (CommandString.startsWith("WlanReady")) wlanReady = true;                    // Live beat of W-LAN communication
-      if (CommandString.startsWith("EncoderReset")) {
+      if (CommandString.startsWith("Wlan ready")) wlanReady = true;                    // Live beat of W-LAN communication
+      if (CommandString.startsWith("Encoder reset")) {
         encLt = 0;                                                                    // Encoder reset
         encRt = 0;
       }
