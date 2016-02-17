@@ -1,7 +1,7 @@
 
 //****************************************************************************************************************************************************
 // *** Arduino robot program
-// *** Version: 2016.02.16
+// *** Version: 2016.02.17
 // *** Developer: Wolfgang Glück
 // ***
 // *** Supported hardware:
@@ -127,7 +127,7 @@ boolean Arduino5VLow = false;
 
 // Motors
 // *******************************************************************************************************************************
-float motorStallLimit = 1.0;  // Stall limit for all motors
+float motorStallLimit = 0.4;  // Stall limit for all motors
 
 // Motor right front
 #define motor1Direction 32
