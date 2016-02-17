@@ -127,7 +127,10 @@ boolean Arduino5VLow = false;
 
 // Motors
 // *******************************************************************************************************************************
-float motorStallLimit = 0.4;  // Stall limit for all motors
+float motorStallLimit = 1.0;  // Stall limit for all motors
+float motorStallLimitSlow = 0.5;
+float motorStallLimitHalf = 0.8;
+float motorStallLimitFull = 1.1;
 
 // Motor right front
 #define motor1Direction 32
@@ -697,7 +700,7 @@ void setup()
     Serial.setTimeout(10);
     delay(2000);
   }
-   Serial.print ("MV@Version: V ");
+  Serial.print ("MV@Version: V ");
   Serial.println(ARDUINO); 
   Serial.print("MV@Battery 9V: LL ");
   Serial.println(battery9VLowerLimit);
@@ -707,14 +710,6 @@ void setup()
   Serial.println(battery5VLowerLimit);    
   Serial.print("MV@Arduino 5V: LL ");
   Serial.println(Arduino5VLowerLimit);
-  Serial.print("MV@Motor1 current: UL ");
-  Serial.println(motorStallLimit);
-  Serial.print("MV@Motor2 current: UL ");
-  Serial.println(motorStallLimit);
-  Serial.print("MV@Motor3 current: UL ");
-  Serial.println(motorStallLimit);
-  Serial.print("MV@Motor4 current: UL ");
-  Serial.println(motorStallLimit);
   Serial.print("MV@Roll: UL ");
   Serial.println(UrollLimit, DEC);
   Serial.print("MV@Roll: LL ");
@@ -1122,7 +1117,16 @@ void loop()
     Serial.println(Arduino5VFinalValue);
     Serial.print("MV@Arduino 5V: LL_Exceeded ");
     Serial.println(Arduino5VLow);
-  
+
+    Serial.print("MV@Motor1 current: UL ");
+    Serial.println(motorStallLimit);
+    Serial.print("MV@Motor2 current: UL ");
+    Serial.println(motorStallLimit);
+    Serial.print("MV@Motor3 current: UL ");
+    Serial.println(motorStallLimit);
+    Serial.print("MV@Motor4 current: UL ");
+    Serial.println(motorStallLimit);
+    
     Serial.print("MV@Motor1 current: V ");
     Serial.println (motor1FinalValue);
     Serial.print("MV@Motor1 current: UL_Exceeded ");
@@ -1273,16 +1277,19 @@ void loop()
         forwardStopCommand = false; forwardSlowCommand = true; forwardHalfCommand = false; forwardFullCommand = false;
         turnSlow45LeftCommand = false; turnSlow45RightCommand = false;
         turnSlow90LeftCommand = false; turnSlow90RightCommand = false; turnFinished = true;
+        motorStallLimit = motorStallLimitSlow;
       }
       if (CommandString.startsWith("Forward half")) {
         forwardStopCommand = false; forwardHalfCommand = true; forwardSlowCommand = false; forwardFullCommand = false;
         turnSlow45LeftCommand = false; turnSlow45RightCommand = false;
         turnSlow90LeftCommand = false; turnSlow90RightCommand = false; turnFinished = true;
+        motorStallLimit = motorStallLimitHalf;
       }
       if (CommandString.startsWith("Forward full")) {
         forwardStopCommand = false; forwardFullCommand = true; forwardSlowCommand = false; forwardHalfCommand = false;
         turnSlow45LeftCommand = false; turnSlow45RightCommand = false;
         turnSlow90LeftCommand = false; turnSlow90RightCommand = false; turnFinished = true;
+        motorStallLimit = motorStallLimitFull;
       }
       if (CommandString.startsWith("Align")){
         alignCommand = true;
@@ -1311,22 +1318,26 @@ void loop()
         turnSlow45LeftCommand = true;
         forwardStopCommand = false; forwardSlowCommand = false; forwardHalfCommand = false; forwardFullCommand = false;
         steeringLeftCommand = false; steeringRightCommand = false; alignCommand = false;
+        motorStallLimit = motorStallLimitSlow;
       }
   
       if (CommandString.startsWith("Turn slow 45 right")) {
         turnSlow45RightCommand = true;
         forwardStopCommand = false; forwardSlowCommand = false; forwardHalfCommand = false; forwardFullCommand = false;
         steeringLeftCommand = false; steeringRightCommand = false; alignCommand = false;
+        motorStallLimit = motorStallLimitSlow;
       }
       if (CommandString.startsWith("Turn slow 90 left")) {
         turnSlow90LeftCommand = true;
         forwardStopCommand = false; forwardSlowCommand = false; forwardHalfCommand = false; forwardFullCommand = false;
         steeringLeftCommand = false; steeringRightCommand = false; alignCommand = false;
+        motorStallLimit = motorStallLimitSlow;
       }
       if (CommandString.startsWith("Turn slow 90 right")) {
         turnSlow90RightCommand = true;
         forwardStopCommand = false; forwardSlowCommand = false; forwardHalfCommand = false; forwardFullCommand = false;
         steeringLeftCommand = false; steeringRightCommand = false; alignCommand = false;
+        motorStallLimit = motorStallLimitSlow;
       }
       if (CommandString.startsWith("Wlan ready")) wlanReady = true;                    // Live beat of W-LAN communication
       if (CommandString.startsWith("Encoder reset")) {
