@@ -104,13 +104,13 @@ boolean usbDisturbance = false;   // if USB interface is not ready
 #define battery9VProbe A0    // wire to battery via 1:1 voltage divider with 4.7kOhm resistors
 int battery9VRawValue = 0;
 float battery9VFinalValue = 0.0;
-float battery9VLowerLimit = 6.9;
+float battery9VLowerLimit = 8.0;
 boolean battery9VLow = false;
 
 #define battery7VProbe A1    // wire to battery via 1:1 voltage divider with 4.7 kOhm resistors
 int battery7VRawValue = 0;
 float battery7VFinalValue = 0.0;
-float battery7VLowerLimit = 4.9;
+float battery7VLowerLimit = 6.0;
 boolean battery7VLow = false;
 
 #define battery5VProbe A2     // supervision of power bank, wire from Raspberry pi 5V via 4.7 kOhm resistor
