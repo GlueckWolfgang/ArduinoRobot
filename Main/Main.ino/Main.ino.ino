@@ -1,7 +1,7 @@
 
 //****************************************************************************************************************************************************
 // *** Arduino robot program
-// *** Version: 2016.02.17
+// *** Version: 2016.04.13
 // *** Developer: Wolfgang Glück
 // ***
 // *** Supported hardware:
@@ -42,7 +42,7 @@
 // ***   - (ok) Send analog and digital values to USB interface
 // ***   - (ok) Get and execute driving commands via USB interface (transition beween driving commands directly is allowed)
 // ***          (Stop, ForwardSlow, ForwardHalf, ForwardFull, SteeringAhead, SteeringLeft, SteeringRight in combination with Forward Commands)
-// ***          (TurnSlow45Left, TurnSlow45Right, TurnSlow90Left, TurnSlow90Right)
+// ***          (TurnSlow45Left, TurnSlow45Right, TurnSlow90Left, TurnSlow90Right, turnSlowTo value)
 // ***   - (ok) get switch on/off command for audio amplifier
 // ***   - (ok) Get reset command for encoder values
 // ***   - (ok) Get status about W-LAN from USB interface
@@ -128,9 +128,9 @@ boolean Arduino5VLow = false;
 // Motors
 // *******************************************************************************************************************************
 float motorStallLimit = 1.0;  // Stall limit for all motors
-float motorStallLimitSlow = 0.5;
-float motorStallLimitHalf = 0.8;
-float motorStallLimitFull = 1.1;
+float motorStallLimitSlow = 0.8;
+float motorStallLimitHalf = 1.0;
+float motorStallLimitFull = 1.2;
 
 // Motor right front
 #define motor1Direction 32
@@ -169,16 +169,20 @@ boolean forward             = 0;
 boolean backward            = 1;
 int startAngle = 0;
 int turnedAngle = 0;
-boolean forwardStopCommand  = true; // Stop command
-boolean forwardSlowCommand  = false; // Forward slow command
-boolean forwardHalfCommand  = false; // Forward half command
-boolean forwardFullCommand  = false; // Forward full command
-boolean steeringLeftCommand = false; // Steering left hand
-boolean steeringRightCommand = false; // Steering right hand
+int turnAngle = 0;                      // Absolute angle to be turned to
+int turnAngleRelative = 0;              // relative angle to be turned
+boolean forwardStopCommand  = true;     // Stop command
+boolean forwardSlowCommand  = false;    // Forward slow command
+boolean forwardHalfCommand  = false;    // Forward half command
+boolean forwardFullCommand  = false;    // Forward full command
+boolean steeringLeftCommand = false;    // Steering left hand
+boolean steeringRightCommand = false;   // Steering right hand
 boolean turnSlow45LeftCommand  = false; // Turn slow 45 degrees left
 boolean turnSlow45RightCommand = false; // Turn slow 45 degrees right
 boolean turnSlow90LeftCommand  = false; // Turn slow 90 degrees left
 boolean turnSlow90RightCommand = false; // Turn slow 90 degrees right
+boolean turnSlowLeftToCommand = false;  // Turn left to an absolute angle
+boolean turnSlowRightToCommand = false; // Turn left to an absolute angle
 boolean turnFinished        = true;
 
 // align command
@@ -277,6 +281,8 @@ void MotorControl()
     turnSlow45RightCommand = false;
     turnSlow90LeftCommand = false;
     turnSlow90RightCommand = false;
+    turnSlowLeftToCommand = false;
+    turnSlowRightToCommand = false;
     forwardStopCommand = true;
     alignCommand = false;
     turnFinished = true;
@@ -367,13 +373,11 @@ void MotorControl()
     }
   }
 
-  if (turnSlow45LeftCommand) {                  // Turn left 45 degrees
-    if (startAngle == 0) {                      // ********************
-      startAngle = angle16;                     // store start angle
-      turnFinished = false;
-    }
-    if ((startAngle - angle16) < 0 && (startAngle - angle16) > -10) turnedAngle = 0; // Filter measuring faults
-    else turnedAngle = (3600 + startAngle - angle16) % 3600;
+  if (turnSlowLeftToCommand) {                    // Turn left to
+                                                  // ************
+    if ((startAngle - angle16) < 0 && (startAngle - angle16) > -10) turnedAngle = 0; // Filter measuring faults (-9..-1)
+    else turnedAngle = (3600 + startAngle - angle16) % 3600;                         // calculate turned angle
+    
     digitalWrite(motor1Direction, backward);
     digitalWrite(motor2Direction, backward);
     digitalWrite(motor3Direction, forward);
@@ -382,79 +386,26 @@ void MotorControl()
     analogWrite(motor2PWM, slowDutyCycle);
     analogWrite(motor3PWM, slowDutyCycle);
     analogWrite(motor4PWM, slowDutyCycle);
-
-    if (turnedAngle >= 450) {                    // Target reached
+  
+    if (turnedAngle >= turnAngleRelative) {       // Target reached
       analogWrite(motor1PWM, stopDutyCycle);
       analogWrite(motor2PWM, stopDutyCycle);
       analogWrite(motor3PWM, stopDutyCycle);
       analogWrite(motor4PWM, stopDutyCycle);
+      turnSlowLeftToCommand = false;
       turnSlow45LeftCommand = false;
-      startAngle = 0;
-      turnFinished = true;
-    }
-  }
-
-  if (turnSlow45RightCommand) {                   // Turn right 45 degrees
-    if (startAngle == 0) {                        // *********************
-      startAngle = angle16;                       // store start angle
-      turnFinished = false;
-    }
-    if ((angle16 - startAngle) < 0 && (angle16 - startAngle) > -10) turnedAngle = 0; // Filter measuring faults
-    else turnedAngle = (3600 + angle16 - startAngle) % 3600;
-    digitalWrite(motor1Direction, forward);
-    digitalWrite(motor2Direction, forward);
-    digitalWrite(motor3Direction, backward);
-    digitalWrite(motor4Direction, backward);
-    analogWrite(motor1PWM, slowDutyCycle);
-    analogWrite(motor2PWM, slowDutyCycle);
-    analogWrite(motor3PWM, slowDutyCycle);
-    analogWrite(motor4PWM, slowDutyCycle);
-
-    if (turnedAngle >= 450) {                      // Target reached
-      analogWrite(motor1PWM, stopDutyCycle);
-      analogWrite(motor2PWM, stopDutyCycle);
-      analogWrite(motor3PWM, stopDutyCycle);
-      analogWrite(motor4PWM, stopDutyCycle);
-      turnSlow45RightCommand = false;
-      startAngle = 0;
-      turnFinished = true;
-    }
-  }
-
-  if (turnSlow90LeftCommand) {                    // Turn left 90 degrees
-    if (startAngle == 0) {                        // ********************
-      startAngle = angle16;                       // store start angle
-      turnFinished = false;
-    }
-    if ((startAngle - angle16) < 0 && (startAngle - angle16) > -10) turnedAngle = 0; // Filter measuring faults
-    else turnedAngle = (3600 + startAngle - angle16) % 3600;
-    digitalWrite(motor1Direction, backward);
-    digitalWrite(motor2Direction, backward);
-    digitalWrite(motor3Direction, forward);
-    digitalWrite(motor4Direction, forward);
-    analogWrite(motor1PWM, slowDutyCycle);
-    analogWrite(motor2PWM, slowDutyCycle);
-    analogWrite(motor3PWM, slowDutyCycle);
-    analogWrite(motor4PWM, slowDutyCycle);
-
-    if (turnedAngle >= 900) {                     // Target reached
-      analogWrite(motor1PWM, stopDutyCycle);
-      analogWrite(motor2PWM, stopDutyCycle);
-      analogWrite(motor3PWM, stopDutyCycle);
-      analogWrite(motor4PWM, stopDutyCycle);
       turnSlow90LeftCommand = false;
-      startAngle = 0;
-      turnFinished = true;
+      turnFinished = true;                        // local status
+      Serial.print("S@Turn finished: ");          // remote status
+      Serial.println(turnFinished);
     }
   }
 
-  if (turnSlow90RightCommand) {                   // Turn right 90 degrees
-    if (startAngle == 0) {                        // *********************
-      startAngle = angle16;                       // store start angle
-      turnFinished = false;
-    }
-    if ((angle16 - startAngle) < 0 && (angle16 - startAngle) > -10) turnedAngle = 0; // Filter measuring faults
-    else turnedAngle = (3600 + angle16 - startAngle) % 3600;
+  if (turnSlowRightToCommand) {                   // Turn right to
+                                                  // *************
+    if ((angle16 - startAngle) < 0 && (angle16 - startAngle) > -10) turnedAngle = 0; // Filter measuring faults (-9..-1)
+    else turnedAngle = (3600 + angle16 - startAngle) % 3600;                         // calculate turned angle
+    
     digitalWrite(motor1Direction, forward);
     digitalWrite(motor2Direction, forward);
     digitalWrite(motor3Direction, backward);
@@ -464,19 +415,20 @@ void MotorControl()
     analogWrite(motor3PWM, slowDutyCycle);
     analogWrite(motor4PWM, slowDutyCycle);
 
-    if (turnedAngle >= 900) {                      // Target reached
+    if (turnedAngle >= turnAngleRelative) {       // Target reached
       analogWrite(motor1PWM, stopDutyCycle);
       analogWrite(motor2PWM, stopDutyCycle);
       analogWrite(motor3PWM, stopDutyCycle);
       analogWrite(motor4PWM, stopDutyCycle);
+      turnSlowRightToCommand = false;
+      turnSlow45RightCommand = false;
       turnSlow90RightCommand = false;
-      startAngle = 0;
-      turnFinished = true;
+      turnFinished = true;                        // local status
+      Serial.print("S@Turn finished: ");          // remote status
+      Serial.println(turnFinished);
     }
   }
-  return;
 }
-
 
 // Encoders
 // *******************************************************************************************************************************
@@ -1015,7 +967,7 @@ void loop()
   digitalWrite(distanceFrontTrig, HIGH);
   delayMicroseconds(10);
   digitalWrite(distanceFrontTrig, LOW);
-  distanceFrontPulseTime = pulseIn(distanceFrontEcho, HIGH, 12000);    // Range limited to 200cm
+  distanceFrontPulseTime = pulseIn(distanceFrontEcho, HIGH, 12000);   // Range limited to 200cm
   if (distanceFrontPulseTime > 60) {                                  // disturbance filter
     distanceFrontCm = distanceFrontPulseTime / 29 / 2;
   }
@@ -1212,9 +1164,6 @@ void loop()
 
     Serial.print("S@Amplifier: ");
     Serial.println(digitalRead(amplifier_VCC));
-  
-    Serial.print("S@Turn finished: ");
-    Serial.println(turnFinished);
     
     Serial.print("S@W-LAN disturbance: ");
     Serial.println(wlanDisturbance);
@@ -1276,19 +1225,22 @@ void loop()
       if (CommandString.startsWith("Forward slow")) {
         forwardStopCommand = false; forwardSlowCommand = true; forwardHalfCommand = false; forwardFullCommand = false;
         turnSlow45LeftCommand = false; turnSlow45RightCommand = false;
-        turnSlow90LeftCommand = false; turnSlow90RightCommand = false; turnFinished = true;
+        turnSlow90LeftCommand = false; turnSlow90RightCommand = false;
+        turnSlowLeftToCommand = false; turnSlowRightToCommand = false;
         motorStallLimit = motorStallLimitSlow;
       }
       if (CommandString.startsWith("Forward half")) {
         forwardStopCommand = false; forwardHalfCommand = true; forwardSlowCommand = false; forwardFullCommand = false;
         turnSlow45LeftCommand = false; turnSlow45RightCommand = false;
-        turnSlow90LeftCommand = false; turnSlow90RightCommand = false; turnFinished = true;
+        turnSlow90LeftCommand = false; turnSlow90RightCommand = false;
+        turnSlowLeftToCommand = false; turnSlowRightToCommand = false;
         motorStallLimit = motorStallLimitHalf;
       }
       if (CommandString.startsWith("Forward full")) {
         forwardStopCommand = false; forwardFullCommand = true; forwardSlowCommand = false; forwardHalfCommand = false;
         turnSlow45LeftCommand = false; turnSlow45RightCommand = false;
-        turnSlow90LeftCommand = false; turnSlow90RightCommand = false; turnFinished = true;
+        turnSlow90LeftCommand = false; turnSlow90RightCommand = false;
+        turnSlowLeftToCommand = false; turnSlowRightToCommand = false;
         motorStallLimit = motorStallLimitFull;
       }
       if (CommandString.startsWith("Align")){
@@ -1315,31 +1267,69 @@ void loop()
         alignCommand = false;
       }
       if (CommandString.startsWith("Turn slow 45 left")) {
+        startAngle = angle16;                     // store start angle
+        turnAngleRelative = 450;
         turnSlow45LeftCommand = true;
+        turnSlowLeftToCommand = true;
         forwardStopCommand = false; forwardSlowCommand = false; forwardHalfCommand = false; forwardFullCommand = false;
         steeringLeftCommand = false; steeringRightCommand = false; alignCommand = false;
+        turnSlowRightToCommand = false; turnFinished = false;
         motorStallLimit = motorStallLimitSlow;
       }
   
       if (CommandString.startsWith("Turn slow 45 right")) {
+        startAngle = angle16;                     // store start angle
+        turnAngleRelative = 450;
         turnSlow45RightCommand = true;
+        turnSlowRightToCommand = true;  
         forwardStopCommand = false; forwardSlowCommand = false; forwardHalfCommand = false; forwardFullCommand = false;
         steeringLeftCommand = false; steeringRightCommand = false; alignCommand = false;
+        turnSlowLeftToCommand = false; turnFinished = false;
         motorStallLimit = motorStallLimitSlow;
       }
       if (CommandString.startsWith("Turn slow 90 left")) {
+        startAngle = angle16;                     // store start angle
+        turnAngleRelative = 900;
         turnSlow90LeftCommand = true;
+        turnSlowLeftToCommand = true;
         forwardStopCommand = false; forwardSlowCommand = false; forwardHalfCommand = false; forwardFullCommand = false;
         steeringLeftCommand = false; steeringRightCommand = false; alignCommand = false;
+        turnSlowRightToCommand = false; turnFinished = false;
         motorStallLimit = motorStallLimitSlow;
       }
       if (CommandString.startsWith("Turn slow 90 right")) {
+        startAngle = angle16;                     // store start angle
+        turnAngleRelative = 900;
         turnSlow90RightCommand = true;
+        turnSlowRightToCommand = true;  
         forwardStopCommand = false; forwardSlowCommand = false; forwardHalfCommand = false; forwardFullCommand = false;
         steeringLeftCommand = false; steeringRightCommand = false; alignCommand = false;
+        turnSlowLeftToCommand = false; turnFinished = false;
         motorStallLimit = motorStallLimitSlow;
       }
-      if (CommandString.startsWith("Wlan ready")) wlanReady = true;                    // Live beat of W-LAN communication
+      if (CommandString.startsWith("Turn slow to : ")) {
+        forwardStopCommand = false; forwardSlowCommand = false; forwardHalfCommand = false; forwardFullCommand = false;
+        steeringLeftCommand = false; steeringRightCommand = false; alignCommand = false;        
+        turnSlowLeftToCommand = false; turnSlowRightToCommand = false; turnFinished = false;
+        motorStallLimit = motorStallLimitSlow;
+
+        startAngle = angle16;                     // store start angle
+
+        // calculate relative angle and decide direction left right
+        CommandString.replace("Turn slow to : ", "");
+        turnAngle = CommandString.toInt();                                            // Absolute angle to be turned to
+        i = (turnAngle - angle16);                                                    // +- 3600
+        turnAngleRelative = i;
+        if (i < -1800) turnAngleRelative = i + 3600;
+        if (i > 1800) turnAngleRelative = i - 3600;
+        if (turnAngleRelative >= 0) turnSlowRightToCommand = true;                    // turn right to
+        else {
+          turnAngleRelative = turnAngleRelative * -1;
+          turnSlowLeftToCommand = true;                                               // turn left to
+        }       
+      }
+     
+      if (CommandString.startsWith("Wlan ready")) wlanReady = true;                   // Live beat of W-LAN communication
       if (CommandString.startsWith("Encoder reset")) {
         encLt = 0;                                                                    // Encoder reset
         encRt = 0;
