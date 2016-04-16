@@ -1,7 +1,7 @@
 
 //****************************************************************************************************************************************************
 // *** Arduino robot program
-// *** Version: 2016.04.13
+// *** Version: 2016.04.16
 // *** Developer: Wolfgang Glück
 // ***
 // *** Supported hardware:
@@ -11,6 +11,7 @@
 // ***   - Motor control Board (MCB) for 2 motors and encoders      (optional)
 // ***   - Arduino mega                                             (Spider)
 // ***   - Compass                                                  (CMPS11 via 10cm I2C bus, using internal pullups by default)
+// ***                                                              (For calibration use separated program CPMS11Calibration)
 // ***   - 6 x Ultra-sonic sensor                                   (US-015)
 // ***   - 1 x Infra red Sensor                                     (Sharp 2Y0A21)
 // ***   - 7,2 V Battery for MCB and drives                         (6x 1,2 V NiMH Akku type D 10'000 mAh, same battery pack as for 9,6 V)
@@ -684,47 +685,6 @@ void setup()
   Serial.println(distanceUpLimit);
   Serial.print("MV@Distance down: UL ");
   Serial.println(distanceDownLimit);
-
-
-
-  // Calibration
-  // ************************************************************************************************************
-  // Initiate calibration
-  // ********************
-  // for calibration deactivate "Reading CPMS values" code and activate "Initiate calibration" code below
-  // after loading Software to Arduiono LED on CMPS11 should be off
-  // Turn the robot (CMPS11) around 360 degrees slowly
-  // The LED on CMPS11 is blinking for any detected maximum value
-  // deactivate "Initiate calibration" code and activate "Stop calibration" code
-
-  //Wire.beginTransmission(CMPS11_ADDRESS);  //starts communication with CMPS11
-  //Wire.write(byte(0x00));                  //set register pointer to command register
-  //Wire.write(CMPS11_Byte1);                //Send command
-  //Wire.endTransmission();
-  //delay(20);
-
-  //Wire.beginTransmission(CMPS11_ADDRESS);  //starts communication with CMPS11
-  //Wire.write(byte(0x00));                  //set register pointer to command register
-  //Wire.write(CMPS11_Byte2);                //Send command
-  //Wire.endTransmission();
-  //delay(20);
-
-  //Wire.beginTransmission(CMPS11_ADDRESS);  //starts communication with CMPS11
-  //Wire.write(byte(0x00));                  //set register pointer to command register
-  //Wire.write(CMPS11_Byte3);                //Send command
-  //Wire.endTransmission();
-  //delay(20);
-
-  // Stop calibration
-  // ****************
-  // For stopping calibration deactivate "Initiate calibration" code and activate "Stop calibration" code
-  // after stopping calibration deactivate "Stop calibration" code and  activate "Read CMPS11 values" code again
-
-  //Wire.beginTransmission(CMPS11_ADDRESS);  //starts communication with CMPS11
-  //Wire.write(byte(0x00));                  //set register pointer to command register
-  //Wire.write(CMPS11_Byte4);                //Send command
-  //Wire.endTransmission();
-  //delay(20);
 }
 
 // Loop
