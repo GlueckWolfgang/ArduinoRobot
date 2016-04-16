@@ -1307,7 +1307,7 @@ void loop()
         turnSlowLeftToCommand = false; turnFinished = false;
         motorStallLimit = motorStallLimitSlow;
       }
-      if (CommandString.startsWith("Turn slow to : ")) {
+      if (CommandString.startsWith("Turn slow to: ")) {
         forwardStopCommand = false; forwardSlowCommand = false; forwardHalfCommand = false; forwardFullCommand = false;
         steeringLeftCommand = false; steeringRightCommand = false; alignCommand = false;        
         turnSlowLeftToCommand = false; turnSlowRightToCommand = false; turnFinished = false;
@@ -1316,7 +1316,7 @@ void loop()
         startAngle = angle16;                     // store start angle
 
         // calculate relative angle and decide direction left right
-        CommandString.replace("Turn slow to : ", "");
+        CommandString.replace("Turn slow to: ", "");
         turnAngle = CommandString.toInt();                                            // Absolute angle to be turned to
         i = (turnAngle - angle16);                                                    // +- 3600
         turnAngleRelative = i;
