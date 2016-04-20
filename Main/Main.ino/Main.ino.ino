@@ -1,7 +1,7 @@
 
 //****************************************************************************************************************************************************
 // *** Arduino robot program
-// *** Version: 2016.04.16
+// *** Version: 2016.04.20
 // *** Developer: Wolfgang Glück
 // ***
 // *** Supported hardware:
@@ -129,7 +129,7 @@ boolean Arduino5VLow = false;
 // Motors
 // *******************************************************************************************************************************
 float motorStallLimit = 1.0;  // Stall limit for all motors
-float motorStallLimitSlow = 0.8;
+float motorStallLimitSlow = 1.0;
 float motorStallLimitHalf = 1.0;
 float motorStallLimitFull = 1.2;
 
@@ -184,7 +184,7 @@ boolean turnSlow90LeftCommand  = false; // Turn slow 90 degrees left
 boolean turnSlow90RightCommand = false; // Turn slow 90 degrees right
 boolean turnSlowLeftToCommand = false;  // Turn left to an absolute angle
 boolean turnSlowRightToCommand = false; // Turn left to an absolute angle
-boolean turnFinished        = true;
+boolean turnFinished = true;
 
 // align command
 boolean alignCommand = false;
@@ -374,11 +374,8 @@ void MotorControl()
     }
   }
 
-  if (turnSlowLeftToCommand) {                    // Turn left to
-                                                  // ************
-    if ((startAngle - angle16) < 0 && (startAngle - angle16) > -10) turnedAngle = 0; // Filter measuring faults (-9..-1)
-    else turnedAngle = (3600 + startAngle - angle16) % 3600;                         // calculate turned angle
-    
+  if (turnSlowLeftToCommand) {                    // Turn left to (see project documentation)
+                                                  // ************  
     digitalWrite(motor1Direction, backward);
     digitalWrite(motor2Direction, backward);
     digitalWrite(motor3Direction, forward);
@@ -387,26 +384,43 @@ void MotorControl()
     analogWrite(motor2PWM, slowDutyCycle);
     analogWrite(motor3PWM, slowDutyCycle);
     analogWrite(motor4PWM, slowDutyCycle);
-  
-    if (turnedAngle >= turnAngleRelative) {       // Target reached
-      analogWrite(motor1PWM, stopDutyCycle);
-      analogWrite(motor2PWM, stopDutyCycle);
-      analogWrite(motor3PWM, stopDutyCycle);
-      analogWrite(motor4PWM, stopDutyCycle);
-      turnSlowLeftToCommand = false;
-      turnSlow45LeftCommand = false;
-      turnSlow90LeftCommand = false;
-      turnFinished = true;                        // local status
-      Serial.print("S@Turn finished: ");          // remote status
-      Serial.println(turnFinished);
-    }
+    
+    if (((startAngle - angle16) < 0) && ((startAngle - angle16) > -10)) turnedAngle = 0; // Filter measuring faults (-9..-1)
+    else turnedAngle = (3600 + startAngle - angle16) % 3600;                             // calculate turned angle
+                                                                                           
+    if (((((turnAngle >= 0) && (turnAngle < 1800))                                                    // brown T1, T2
+          ||((turnAngle >= 1800) && (turnAngle < 3600) && (startAngle >= 1800) && (startAngle < 3600))// brown T3, T4
+         )                                                                                  
+         && (angle16 <= turnAngle)                                                           
+         && (angle16 < startAngle)
+         && (turnedAngle > 0)
+        )
+        ||(((turnAngle >= 0) && (turnAngle < 900))                                                   // brown/red T1                                                                                                                                       
+         && (angle16 > startAngle)
+         && (turnedAngle > 0)
+        )     
+        ||(((turnAngle >= 1800) && (turnAngle < 3600) && (startAngle >= 0) && (startAngle < 1800))   // blue T3, T4  
+           && (angle16 <= turnAngle) 
+           && (angle16 > startAngle)
+           && (turnedAngle > 0)
+          )
+        ){                                                                                           // Target reached  
+          analogWrite(motor1PWM, stopDutyCycle);
+          analogWrite(motor2PWM, stopDutyCycle);
+          analogWrite(motor3PWM, stopDutyCycle);
+          analogWrite(motor4PWM, stopDutyCycle);
+          turnSlowLeftToCommand = false;
+          turnSlow45LeftCommand = false;
+          turnSlow90LeftCommand = false;
+          forwardStopCommand = true;
+          turnFinished = true;                        // local status
+          Serial.print("S@Turn finished: ");          // remote status
+          Serial.println(turnFinished);
+         }
   }
 
-  if (turnSlowRightToCommand) {                   // Turn right to
-                                                  // *************
-    if ((angle16 - startAngle) < 0 && (angle16 - startAngle) > -10) turnedAngle = 0; // Filter measuring faults (-9..-1)
-    else turnedAngle = (3600 + angle16 - startAngle) % 3600;                         // calculate turned angle
-    
+  if (turnSlowRightToCommand) {                   // Turn right to (see project documentation)
+                                                  // *************   
     digitalWrite(motor1Direction, forward);
     digitalWrite(motor2Direction, forward);
     digitalWrite(motor3Direction, backward);
@@ -415,18 +429,39 @@ void MotorControl()
     analogWrite(motor2PWM, slowDutyCycle);
     analogWrite(motor3PWM, slowDutyCycle);
     analogWrite(motor4PWM, slowDutyCycle);
+    
+    if (((angle16 - startAngle) < 0) && ((angle16 - startAngle) > -10)) turnedAngle = 0; // Filter measuring faults (-9..-1)
+    else turnedAngle = (3600 + angle16 - startAngle) % 3600;                             // calculate turned angle
 
-    if (turnedAngle >= turnAngleRelative) {       // Target reached
-      analogWrite(motor1PWM, stopDutyCycle);
-      analogWrite(motor2PWM, stopDutyCycle);
-      analogWrite(motor3PWM, stopDutyCycle);
-      analogWrite(motor4PWM, stopDutyCycle);
-      turnSlowRightToCommand = false;
-      turnSlow45RightCommand = false;
-      turnSlow90RightCommand = false;
-      turnFinished = true;                        // local status
-      Serial.print("S@Turn finished: ");          // remote status
-      Serial.println(turnFinished);
+    if (((((turnAngle >= 1800) && (turnAngle < 3600))                                             // violet T3, T4
+          ||((turnAngle >= 0) && (turnAngle < 1800) && (startAngle >= 0) && (startAngle < 1800))  // violet T1, T2
+         )                                                                               
+          && ((angle16 >= turnAngle) 
+          && (angle16 > startAngle))
+          && (turnedAngle > 0)
+        )
+        ||(((turnAngle >= 2700) && (turnAngle < 3600))                                            // violet/yellow T4                                                                             
+          && (angle16 < startAngle)
+          && (turnedAngle > 0)
+        )
+      
+        ||(((turnAngle >= 0) && (turnAngle < 1800) && (startAngle >= 1800) && (startAngle < 3600))// green T1, T2
+          && (angle16 >= turnAngle) 
+          && (angle16 < startAngle)
+          && (turnedAngle > 0)
+          )
+      ){                                                                                          // Target reached    
+        analogWrite(motor1PWM, stopDutyCycle);
+        analogWrite(motor2PWM, stopDutyCycle);
+        analogWrite(motor3PWM, stopDutyCycle);
+        analogWrite(motor4PWM, stopDutyCycle);
+        turnSlowRightToCommand = false;
+        turnSlow45RightCommand = false;
+        turnSlow90RightCommand = false;
+        forwardStopCommand = true;
+        turnFinished = true;                        // local status
+        Serial.print("S@Turn finished: ");          // remote status
+        Serial.println(turnFinished);
     }
   }
 }
@@ -697,26 +732,28 @@ void loop()
   // *********************************************************************************************************************************
   digitalWrite(ledPin, digitalRead(ledPin) ^ 1);   // toggle LED pin by XOR
   // regulation of cycle time because of intermediateAngle calculation  total cycletime should be <= 500 ms
- 
-  // Read battery probe and check limit
-  // *********************************************************************************************************************************
-  battery9VRawValue = analogRead(battery9VProbe);
-  battery7VRawValue = analogRead(battery7VProbe);
-  battery5VRawValue = analogRead(battery5VProbe);
-  Arduino5VRawValue = analogRead(Arduino5VProbe);
 
-  battery9VFinalValue = battery9VRawValue * 10.0 / 1023.0;
-  battery9VLow = (battery9VFinalValue < battery9VLowerLimit);
-
-  battery7VFinalValue = battery7VRawValue * 10.0 / 1023.0;
-  battery7VLow = (battery7VFinalValue < battery7VLowerLimit);
-
-
-  battery5VFinalValue = battery5VRawValue * 5.0 / 1023.0;
-  battery5VLow = (battery5VFinalValue < battery5VLowerLimit);
-
-  Arduino5VFinalValue = Arduino5VRawValue * 5.0 / 1023.0;
-  Arduino5VLow = (Arduino5VFinalValue < Arduino5VLowerLimit);
+  if (turnFinished == true) {
+    // Read battery probe and check limit if no turn is running (shorten cycle time)
+    // *********************************************************************************************************************************
+    battery9VRawValue = analogRead(battery9VProbe);
+    battery7VRawValue = analogRead(battery7VProbe);
+    battery5VRawValue = analogRead(battery5VProbe);
+    Arduino5VRawValue = analogRead(Arduino5VProbe);
+  
+    battery9VFinalValue = battery9VRawValue * 10.0 / 1023.0;
+    battery9VLow = (battery9VFinalValue < battery9VLowerLimit);
+  
+    battery7VFinalValue = battery7VRawValue * 10.0 / 1023.0;
+    battery7VLow = (battery7VFinalValue < battery7VLowerLimit);
+  
+  
+    battery5VFinalValue = battery5VRawValue * 5.0 / 1023.0;
+    battery5VLow = (battery5VFinalValue < battery5VLowerLimit);
+  
+    Arduino5VFinalValue = Arduino5VRawValue * 5.0 / 1023.0;
+    Arduino5VLow = (Arduino5VFinalValue < Arduino5VLowerLimit);
+  }
 
   // Read motor current probe and check limit
   // ************************************************************************************************************************************
@@ -766,196 +803,199 @@ void loop()
   angle16 = angle16 % 3600;
   if ((angle16 >= 3595) || (angle16 <= 5)) angle16 = 0;               // Hysteresis +- 0.5 degree arount 0 degrees
 
-  // calculate sliding intermediate value over the last 10 values
-  for (i = 9; i > 0; i --) {
-    angleVectorList[i][0] = angleVectorList[i - 1][0];                // shift register right
-    angleVectorList[i][1] = angleVectorList[1 - 1][1];
-  }
-
-  angleVectorList[0][0] = sin(angle16 * PI / 1800);                   // write new vector in to register
-  angleVectorList[0][1] = cos(angle16 * PI / 1800);
-
-  vectora1 = 0.0;
-  vectora2 = 0.0;
-  for (i = 0; i <= 9; i ++) {
-    vectora1 = vectora1 + angleVectorList[i][0];
-    vectora2 = vectora2 + angleVectorList[i][1];
-  }
-
-  vectorLength = sqrt((vectora1 * vectora1) + (vectora2 * vectora2));
-  cosinus = vectora2 / vectorLength;
-  angle = acos(cosinus);
-  if (vectora1 > 0) intermediateAngle = angle * 1800 / PI;
-  else intermediateAngle = 3600 - (angle * 1800 / PI);
-  if (intermediateAngle == 3600) intermediateAngle = 0;
-
-  // Read distances to obstructions
-  // *************************************************************************************************************************************
-  digitalWrite(distancefLeftTrig, LOW);                               // front Left
-  delayMicroseconds(5);                                               // ****
-  digitalWrite(distancefLeftTrig, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(distancefLeftTrig, LOW);
-  distancefLeftPulseTime = pulseIn(distancefLeftEcho, HIGH, 12000);    // Range limited to 200cm (timeout delivers 0)
-  if (distancefLeftPulseTime > 60) {                                  // disturbance filter
-    distancefLeftCm = distancefLeftPulseTime / 29 / 2;
-  }
-  else { 
-    distancefLeftCm = 210;                                            // out of range
-  }
-  distancefLeftObstruction = (distancefLeftCm < distancefLeftLimit);  // Obstruction detected front left
-
-  digitalWrite(distancefRightTrig, LOW);                              // front Right
-  delayMicroseconds(5);                                               // *****
-  digitalWrite(distancefRightTrig, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(distancefRightTrig, LOW);
-  distancefRightPulseTime = pulseIn(distancefRightEcho, HIGH, 12000);  // Range limited to 200cm
-  if (distancefRightPulseTime > 60) {                                  // disturbance filter
-    distancefRightCm = distancefRightPulseTime / 29 / 2;
-  }
-  else {
-    distancefRightCm = 210;                                            // out of range
-  }
-  distancefRightObstruction = (distancefRightCm < distancefRightLimit);// Obstruction detected front right
+  if (turnFinished == true){
+    // calculate sliding intermediate value over the last 10 values if no turn is running (shorten cycle time)
+    for (i = 9; i > 0; i --) {
+      angleVectorList[i][0] = angleVectorList[i - 1][0];                // shift register right
+      angleVectorList[i][1] = angleVectorList[1 - 1][1];
+    }
   
+    angleVectorList[0][0] = sin(angle16 * PI / 1800);                   // write new vector in to register
+    angleVectorList[0][1] = cos(angle16 * PI / 1800);
   
-//  digitalWrite(distancebLeftTrig, LOW);                               // back Left
-//  delayMicroseconds(5);                                               // ****
-//  digitalWrite(distancebLeftTrig, HIGH);
-//  delayMicroseconds(10);
-//  digitalWrite(distancebLeftTrig, LOW);
-//  distancebLeftPulseTime = pulseIn(distancebLeftEcho, HIGH, 12000);
-//  if (distancebLeftPulseTime > 60) {                                  // disturbance filter
-//    distancebLeftCm = distancebLeftPulseTime / 29 / 2;
-//  }
-//  else {
-//    distancebLeftCm = 210;                                            // out of range
-//  }
-//  distancebLeftObstruction = (distancebLeftCm < distancebLeftLimit);// Obstruction detected back left
-//  
-//  digitalWrite(distancebRightTrig, LOW);                              // back Right
-//  delayMicroseconds(5);                                               // *****
-//  digitalWrite(distancebRightTrig, HIGH);
-//  delayMicroseconds(10);
-//  digitalWrite(distancebRightTrig, LOW);
-//  distancebRightPulseTime = pulseIn(distancebRightEcho, HIGH, 12000);
-//  if (distancebRightPulseTime > 60) {                                 // disturbance filter
-//    distancebRightCm = distancebRightPulseTime / 29 / 2;
-//  }
-//  else {
-//    distancebRightCm = 210;                                           // out of range
-//  }
-//  distancebRightObstruction = (distancebRightCm < distancebRightLimit);// Obstruction detected back right
+    vectora1 = 0.0;
+    vectora2 = 0.0;
+    for (i = 0; i <= 9; i ++) {
+      vectora1 = vectora1 + angleVectorList[i][0];
+      vectora2 = vectora2 + angleVectorList[i][1];
+    }
   
-  // Alignment
-  // *********
-  alignLTrue = false;
-  alignRTrue = false;
-  if (alignCommand && (distancebLeftCm < 10 || distancebLeftCm > 200) && (distancebRightCm < 10 || distancebRightCm > 200)) {
-    // no wall in range
-    alignCommand = false;
-    countL = 1;
-    countR = 1;
-  }
-  else {
-    if (alignCommand && distancebLeftCm >= 10 && distancebLeftCm <= 200 && distancebRightCm >= 10 && distancebRightCm <= 200) {
-      // two walls in range
-      alignLTrue = linearRegression(SrL, distancebLeftCm, aL, bL, countL);
-      alignRTrue = linearRegression(SrR, distancebRightCm, aR, bR, countR);
+    vectorLength = sqrt((vectora1 * vectora1) + (vectora2 * vectora2));
+    cosinus = vectora2 / vectorLength;
+    angle = acos(cosinus);
+    if (vectora1 > 0) intermediateAngle = angle * 1800 / PI;
+    else intermediateAngle = 3600 - (angle * 1800 / PI);
+    if (intermediateAngle == 3600) intermediateAngle = 0;
 
-      // select the wall in shorter distance
-      if (distancebLeftCm <= distancebRightCm)  alignRTrue = false;
-      else                                      alignLTrue = false;  
+  
+    // Read distances to obstructions if no turn comman is running (shorten cycle time)
+    // *************************************************************************************************************************************
+    digitalWrite(distancefLeftTrig, LOW);                               // front Left
+    delayMicroseconds(5);                                               // ****
+    digitalWrite(distancefLeftTrig, HIGH);
+    delayMicroseconds(10);
+    digitalWrite(distancefLeftTrig, LOW);
+    distancefLeftPulseTime = pulseIn(distancefLeftEcho, HIGH, 12000);    // Range limited to 200cm (timeout delivers 0)
+    if (distancefLeftPulseTime > 60) {                                  // disturbance filter
+      distancefLeftCm = distancefLeftPulseTime / 29 / 2;
+    }
+    else { 
+      distancefLeftCm = 210;                                            // out of range
+    }
+    distancefLeftObstruction = (distancefLeftCm < distancefLeftLimit);  // Obstruction detected front left
+  
+    digitalWrite(distancefRightTrig, LOW);                              // front Right
+    delayMicroseconds(5);                                               // *****
+    digitalWrite(distancefRightTrig, HIGH);
+    delayMicroseconds(10);
+    digitalWrite(distancefRightTrig, LOW);
+    distancefRightPulseTime = pulseIn(distancefRightEcho, HIGH, 12000);  // Range limited to 200cm
+    if (distancefRightPulseTime > 60) {                                  // disturbance filter
+      distancefRightCm = distancefRightPulseTime / 29 / 2;
     }
     else {
-      if (alignCommand && distancebLeftCm >= 10 && distancebLeftCm <= 200){
-        // left wall only in range
+      distancefRightCm = 210;                                            // out of range
+    }
+    distancefRightObstruction = (distancefRightCm < distancefRightLimit);// Obstruction detected front right
+    
+    
+  //  digitalWrite(distancebLeftTrig, LOW);                               // back Left
+  //  delayMicroseconds(5);                                               // ****
+  //  digitalWrite(distancebLeftTrig, HIGH);
+  //  delayMicroseconds(10);
+  //  digitalWrite(distancebLeftTrig, LOW);
+  //  distancebLeftPulseTime = pulseIn(distancebLeftEcho, HIGH, 12000);
+  //  if (distancebLeftPulseTime > 60) {                                  // disturbance filter
+  //    distancebLeftCm = distancebLeftPulseTime / 29 / 2;
+  //  }
+  //  else {
+  //    distancebLeftCm = 210;                                            // out of range
+  //  }
+  //  distancebLeftObstruction = (distancebLeftCm < distancebLeftLimit);// Obstruction detected back left
+  //  
+  //  digitalWrite(distancebRightTrig, LOW);                              // back Right
+  //  delayMicroseconds(5);                                               // *****
+  //  digitalWrite(distancebRightTrig, HIGH);
+  //  delayMicroseconds(10);
+  //  digitalWrite(distancebRightTrig, LOW);
+  //  distancebRightPulseTime = pulseIn(distancebRightEcho, HIGH, 12000);
+  //  if (distancebRightPulseTime > 60) {                                 // disturbance filter
+  //    distancebRightCm = distancebRightPulseTime / 29 / 2;
+  //  }
+  //  else {
+  //    distancebRightCm = 210;                                           // out of range
+  //  }
+  //  distancebRightObstruction = (distancebRightCm < distancebRightLimit);// Obstruction detected back right
+    
+    // Alignment
+    // *********
+    alignLTrue = false;
+    alignRTrue = false;
+    if (alignCommand && (distancebLeftCm < 10 || distancebLeftCm > 200) && (distancebRightCm < 10 || distancebRightCm > 200)) {
+      // no wall in range
+      alignCommand = false;
+      countL = 1;
+      countR = 1;
+    }
+    else {
+      if (alignCommand && distancebLeftCm >= 10 && distancebLeftCm <= 200 && distancebRightCm >= 10 && distancebRightCm <= 200) {
+        // two walls in range
         alignLTrue = linearRegression(SrL, distancebLeftCm, aL, bL, countL);
-        countR = 1;   
+        alignRTrue = linearRegression(SrR, distancebRightCm, aR, bR, countR);
+  
+        // select the wall in shorter distance
+        if (distancebLeftCm <= distancebRightCm)  alignRTrue = false;
+        else                                      alignLTrue = false;  
       }
       else {
-        if (alignCommand) {
-          // right wall only in range
-          alignRTrue = linearRegression(SrR, distancebRightCm, aR, bR, countR);
-          countL = 1;
+        if (alignCommand && distancebLeftCm >= 10 && distancebLeftCm <= 200){
+          // left wall only in range
+          alignLTrue = linearRegression(SrL, distancebLeftCm, aL, bL, countL);
+          countR = 1;   
+        }
+        else {
+          if (alignCommand) {
+            // right wall only in range
+            alignRTrue = linearRegression(SrR, distancebRightCm, aR, bR, countR);
+            countL = 1;
+          }
         }
       }
     }
-  }
-  if (alignCommand && alignLTrue) {
-    // Align based on left sensor
-    if (aL > - 0.2 && aL < 0.2){
-      // steer ahead and end align
-      steeringLeftCommand = false;
-      steeringRightCommand = false;
-      alignCommand = false;
+    if (alignCommand && alignLTrue) {
+      // Align based on left sensor
+      if (aL > - 0.2 && aL < 0.2){
+        // steer ahead and end align
+        steeringLeftCommand = false;
+        steeringRightCommand = false;
+        alignCommand = false;
+      }
+      if (aL > 0) {
+        // Steering right
+        steeringLeftCommand = false;
+        steeringRightCommand = true;
+      }
+      else {
+        // Steering left
+        steeringRightCommand = false;
+        steeringLeftCommand = true;
+      }
     }
-    if (aL > 0) {
-      // Steering right
-      steeringLeftCommand = false;
-      steeringRightCommand = true;
+    if (alignCommand && alignRTrue) {
+      // Align based on right sensor
+      if (aR > - 0.2 && aR < 0.2){
+        // steer ahead and end align
+        steeringLeftCommand = false;
+        steeringRightCommand = false;
+        alignCommand = false;
+      }
+      if (aR > 0) {
+        // Steering right
+        steeringLeftCommand = false;
+        steeringRightCommand = true;
+      }
+      else {
+        // Steering left
+        steeringRightCommand = false;
+        steeringLeftCommand = true;
+      }
+    }
+  
+    digitalWrite(distanceFrontTrig, LOW);                               // Front
+    delayMicroseconds(5);                                               // *****
+    digitalWrite(distanceFrontTrig, HIGH);
+    delayMicroseconds(10);
+    digitalWrite(distanceFrontTrig, LOW);
+    distanceFrontPulseTime = pulseIn(distanceFrontEcho, HIGH, 12000);   // Range limited to 200cm
+    if (distanceFrontPulseTime > 60) {                                  // disturbance filter
+      distanceFrontCm = distanceFrontPulseTime / 29 / 2;
     }
     else {
-      // Steering left
-      steeringRightCommand = false;
-      steeringLeftCommand = true;
+      distanceFrontCm = 210;                                            // out of range
     }
-  }
-  if (alignCommand && alignRTrue) {
-    // Align based on right sensor
-    if (aR > - 0.2 && aR < 0.2){
-      // steer ahead and end align
-      steeringLeftCommand = false;
-      steeringRightCommand = false;
-      alignCommand = false;
-    }
-    if (aR > 0) {
-      // Steering right
-      steeringLeftCommand = false;
-      steeringRightCommand = true;
+    distanceFrontObstruction = (distanceFrontCm < distanceFrontLimit);// Obstruction detected front side
+  
+    digitalWrite(distanceUpTrig, LOW);                                  // Up
+    delayMicroseconds(5);                                               // **
+    digitalWrite(distanceUpTrig, HIGH);
+    delayMicroseconds(10);
+    digitalWrite(distanceUpTrig, LOW);
+    distanceUpPulseTime = pulseIn(distanceUpEcho, HIGH, 17000);         // Range limited to 300cm
+    if (distanceUpPulseTime > 60) {                                     // disturbance filter
+      distanceUpCm = distanceUpPulseTime / 29 / 2;
     }
     else {
-      // Steering left
-      steeringRightCommand = false;
-      steeringLeftCommand = true;
+      distanceUpCm = 310;                                               // out of range
     }
+    distanceUpDoor = (distanceUpCm < distanceUpLimit);                  // Door passing
+  
+                                                                        // Down
+                                                                        // ****
+  
+    distanceDownRawValue = analogRead(distanceDownProbe);               // Read IR sensor
+    distanceDownCm = (4800 / (distanceDownRawValue - 20));           
+    distanceDownObstruction = (distanceDownCm > distanceDownLimit);     // Obstruction detected
   }
-
-  digitalWrite(distanceFrontTrig, LOW);                               // Front
-  delayMicroseconds(5);                                               // *****
-  digitalWrite(distanceFrontTrig, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(distanceFrontTrig, LOW);
-  distanceFrontPulseTime = pulseIn(distanceFrontEcho, HIGH, 12000);   // Range limited to 200cm
-  if (distanceFrontPulseTime > 60) {                                  // disturbance filter
-    distanceFrontCm = distanceFrontPulseTime / 29 / 2;
-  }
-  else {
-    distanceFrontCm = 210;                                            // out of range
-  }
-  distanceFrontObstruction = (distanceFrontCm < distanceFrontLimit);// Obstruction detected front side
-
-  digitalWrite(distanceUpTrig, LOW);                                  // Up
-  delayMicroseconds(5);                                               // **
-  digitalWrite(distanceUpTrig, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(distanceUpTrig, LOW);
-  distanceUpPulseTime = pulseIn(distanceUpEcho, HIGH, 17000);         // Range limited to 300cm
-  if (distanceUpPulseTime > 60) {                                     // disturbance filter
-    distanceUpCm = distanceUpPulseTime / 29 / 2;
-  }
-  else {
-    distanceUpCm = 310;                                               // out of range
-  }
-  distanceUpDoor = (distanceUpCm < distanceUpLimit);                  // Door passing
-
-                                                                      // Down
-                                                                      // ****
-
-  distanceDownRawValue = analogRead(distanceDownProbe);               // Read IR sensor
-  distanceDownCm = (4800 / (distanceDownRawValue - 20));           
-  distanceDownObstruction = (distanceDownCm > distanceDownLimit);     // Obstruction detected
 
   // Build and execute emergency stop
   // *************************************************************************************************************************************
@@ -1001,34 +1041,89 @@ void loop()
   // check serial interface
   // *************************************************************************************************************************************
   if (Serial) { usbDisturbance = false;                                            // USB ok
+    if (turnFinished == true) {
+      // Send values to USB interface if no turn command is running (shorten cycle time)
+      // *************************************************************************************************************************************
+    
+      Serial.print("MV@EncLt: V ");
+      Serial.println(encLt, DEC);
+      Serial.print("MV@EncRt: V ");
+      Serial.println(encRt, DEC);
+    
+      Serial.print("MV@Battery 9V: V ");
+      Serial.println(battery9VFinalValue);
+      Serial.print("MV@Battery 9V: LL_Exceeded ");
+      Serial.println(battery9VLow);
+    
+      Serial.print("MV@Battery 7V: V ");
+      Serial.println(battery7VFinalValue);
+      Serial.print("MV@Battery 7V: LL_Exceeded ");
+      Serial.println(battery7VLow);
+    
+      Serial.print("MV@Battery 5V: V ");
+      Serial.println(battery5VFinalValue);
+      Serial.print("MV@Battery 5V: LL_Exceeded ");
+      Serial.println(battery5VLow);
+    
+      Serial.print("MV@Arduino 5V: V ");
+      Serial.println(Arduino5VFinalValue);
+      Serial.print("MV@Arduino 5V: LL_Exceeded ");
+      Serial.println(Arduino5VLow);
 
-    // Send values to USB interface
-    // *************************************************************************************************************************************
+      Serial.print("MV@Distance fleft: V ");
+      Serial.println(distancefLeftCm);
+      Serial.print("MV@Distance fleft: LL_Exceeded ");
+      Serial.println(distancefLeftObstruction);
+    
+      Serial.print("MV@Distance fright: V ");
+      Serial.println(distancefRightCm);
+      Serial.print("MV@Distance fright: LL_Exceeded ");
+      Serial.println(distancefRightObstruction);
   
-    Serial.print("MV@EncLt: V ");
-    Serial.println(encLt, DEC);
-    Serial.print("MV@EncRt: V ");
-    Serial.println(encRt, DEC);
-  
-    Serial.print("MV@Battery 9V: V ");
-    Serial.println(battery9VFinalValue);
-    Serial.print("MV@Battery 9V: LL_Exceeded ");
-    Serial.println(battery9VLow);
-  
-    Serial.print("MV@Battery 7V: V ");
-    Serial.println(battery7VFinalValue);
-    Serial.print("MV@Battery 7V: LL_Exceeded ");
-    Serial.println(battery7VLow);
-  
-    Serial.print("MV@Battery 5V: V ");
-    Serial.println(battery5VFinalValue);
-    Serial.print("MV@Battery 5V: LL_Exceeded ");
-    Serial.println(battery5VLow);
-  
-    Serial.print("MV@Arduino 5V: V ");
-    Serial.println(Arduino5VFinalValue);
-    Serial.print("MV@Arduino 5V: LL_Exceeded ");
-    Serial.println(Arduino5VLow);
+      Serial.print("MV@Distance bleft: V ");
+      Serial.println(distancebLeftCm);
+      Serial.print("MV@Distance bleft: LL_Exceeded ");
+      Serial.println(distancebLeftObstruction);
+    
+      Serial.print("MV@Distance bright: V ");
+      Serial.println(distancebRightCm);
+      Serial.print("MV@Distance bright: LL_Exceeded ");
+      Serial.println(distancebRightObstruction);
+    
+      Serial.print("MV@Distance front: V ");
+      Serial.println(distanceFrontCm);
+      Serial.print("MV@Distance front: LL_Exceeded ");
+      Serial.println(distanceFrontObstruction);
+    
+      Serial.print("MV@Distance up: V ");
+      Serial.println(distanceUpCm);
+      
+      Serial.print("MV@Distance down: V ");
+      Serial.println(distanceDownCm);
+      Serial.print("MV@Distance down: UL_Exceeded ");
+      Serial.println(distanceDownObstruction);
+
+      Serial.print("S@Forward slow: ");
+      Serial.println(forwardSlowCommand);
+      Serial.print("S@Forward half: ");
+      Serial.println(forwardHalfCommand);
+      Serial.print("S@Forward full: ");
+      Serial.println(forwardFullCommand);
+      Serial.print("S@Steering left: ");
+      Serial.println(steeringLeftCommand);
+      Serial.print("S@Steering right: ");
+      Serial.println(steeringRightCommand);
+      Serial.print("S@Turn slow 45 left: ");
+      Serial.println(turnSlow45LeftCommand);
+      Serial.print("S@Turn slow 45 right: ");
+      Serial.println(turnSlow45RightCommand);
+      Serial.print("S@Turn slow 90 left: ");
+      Serial.println(turnSlow90LeftCommand);
+      Serial.print("S@Turn slow 90 right: ");
+      Serial.println(turnSlow90RightCommand);
+      Serial.print("S@Align: ");
+      Serial.println(alignCommand);
+    }
 
     Serial.print("MV@Motor1 current: UL ");
     Serial.println(motorStallLimit);
@@ -1083,39 +1178,6 @@ void loop()
     Serial.print(".");
     Serial.println(intermediateAngle % 10, DEC);
   
-    Serial.print("MV@Distance fleft: V ");
-    Serial.println(distancefLeftCm);
-    Serial.print("MV@Distance fleft: LL_Exceeded ");
-    Serial.println(distancefLeftObstruction);
-  
-    Serial.print("MV@Distance fright: V ");
-    Serial.println(distancefRightCm);
-    Serial.print("MV@Distance fright: LL_Exceeded ");
-    Serial.println(distancefRightObstruction);
-
-    Serial.print("MV@Distance bleft: V ");
-    Serial.println(distancebLeftCm);
-    Serial.print("MV@Distance bleft: LL_Exceeded ");
-    Serial.println(distancebLeftObstruction);
-  
-    Serial.print("MV@Distance bright: V ");
-    Serial.println(distancebRightCm);
-    Serial.print("MV@Distance bright: LL_Exceeded ");
-    Serial.println(distancebRightObstruction);
-  
-    Serial.print("MV@Distance front: V ");
-    Serial.println(distanceFrontCm);
-    Serial.print("MV@Distance front: LL_Exceeded ");
-    Serial.println(distanceFrontObstruction);
-  
-    Serial.print("MV@Distance up: V ");
-    Serial.println(distanceUpCm);
-    
-    Serial.print("MV@Distance down: V ");
-    Serial.println(distanceDownCm);
-    Serial.print("MV@Distance down: UL_Exceeded ");
-    Serial.println(distanceDownObstruction);
-  
     Serial.print("MV@Turned angle: V ");
     Serial.println(turnedAngle);
 
@@ -1131,37 +1193,17 @@ void loop()
     Serial.print("S@Emergency stop: ");
     Serial.println(emergencyStop);
 
-
-    
     Serial.print("S@Stop: ");
     Serial.println(forwardStopCommand);  
-    Serial.print("S@Forward slow: ");
-    Serial.println(forwardSlowCommand);
-    Serial.print("S@Forward half: ");
-    Serial.println(forwardHalfCommand);
-    Serial.print("S@Forward full: ");
-    Serial.println(forwardFullCommand);
-    Serial.print("S@Steering left: ");
-    Serial.println(steeringLeftCommand);
-    Serial.print("S@Steering right: ");
-    Serial.println(steeringRightCommand);
-    Serial.print("S@Turn slow 45 left: ");
-    Serial.println(turnSlow45LeftCommand);
-    Serial.print("S@Turn slow 45 right: ");
-    Serial.println(turnSlow45RightCommand);
-    Serial.print("S@Turn slow 90 left: ");
-    Serial.println(turnSlow90LeftCommand);
-    Serial.print("S@Turn slow 90 right: ");
-    Serial.println(turnSlow90RightCommand);
-    Serial.print("S@Align: ");
-    Serial.println(alignCommand);
+
+
     
 //    Serial.print("MV@Distance down raw value: "); // For test reasons only
 //    Serial.println(distanceDownRawValue);         // For test reasons only
 //    Serial.print("MV@Distance down pulse time: ");// For test reasons only
 //    Serial.println(distanceDownPulseTime);        // For test reasons only
     
-//    Serial.print("S@TestPoint1: ");         // for testing set e.g. testPoint1 = 1; and read it in the datastream on your PC
+//    Serial.print("S@TestPoint1: ");               // for testing set e.g. testPoint1 = 1; and read it in the datastream on your PC
 //    Serial.println(testPoint1);
 //    Serial.print("S@TestPoint2: ");
 //    Serial.println(testPoint2);
@@ -1228,7 +1270,9 @@ void loop()
       }
       if (CommandString.startsWith("Turn slow 45 left")) {
         startAngle = angle16;                     // store start angle
-        turnAngleRelative = 450;
+        turnAngleRelative = 420;
+        turnAngle = (3600 + angle16 - 420) % 3600;
+        
         turnSlow45LeftCommand = true;
         turnSlowLeftToCommand = true;
         forwardStopCommand = false; forwardSlowCommand = false; forwardHalfCommand = false; forwardFullCommand = false;
@@ -1239,7 +1283,9 @@ void loop()
   
       if (CommandString.startsWith("Turn slow 45 right")) {
         startAngle = angle16;                     // store start angle
-        turnAngleRelative = 450;
+        turnAngleRelative = 420;
+        turnAngle = (angle16 + 420) % 3600;
+        
         turnSlow45RightCommand = true;
         turnSlowRightToCommand = true;  
         forwardStopCommand = false; forwardSlowCommand = false; forwardHalfCommand = false; forwardFullCommand = false;
@@ -1249,7 +1295,9 @@ void loop()
       }
       if (CommandString.startsWith("Turn slow 90 left")) {
         startAngle = angle16;                     // store start angle
-        turnAngleRelative = 900;
+        turnAngleRelative = 870;
+        turnAngle = (3600 + angle16 - 870) % 3600;
+        
         turnSlow90LeftCommand = true;
         turnSlowLeftToCommand = true;
         forwardStopCommand = false; forwardSlowCommand = false; forwardHalfCommand = false; forwardFullCommand = false;
@@ -1259,7 +1307,9 @@ void loop()
       }
       if (CommandString.startsWith("Turn slow 90 right")) {
         startAngle = angle16;                     // store start angle
-        turnAngleRelative = 900;
+        turnAngleRelative = 870;
+        turnAngle = (angle16 + 870) % 3600;
+               
         turnSlow90RightCommand = true;
         turnSlowRightToCommand = true;  
         forwardStopCommand = false; forwardSlowCommand = false; forwardHalfCommand = false; forwardFullCommand = false;
@@ -1284,7 +1334,7 @@ void loop()
         if (i > 1800) turnAngleRelative = i - 3600;
         if (turnAngleRelative >= 0) turnSlowRightToCommand = true;                    // turn right to
         else {
-          turnAngleRelative = turnAngleRelative * -1;
+          turnAngleRelative = abs(turnAngleRelative);
           turnSlowLeftToCommand = true;                                               // turn left to
         }       
       }
