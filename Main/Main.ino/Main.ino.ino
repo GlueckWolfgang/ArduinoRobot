@@ -1,7 +1,7 @@
 
 //****************************************************************************************************************************************************
 // *** Arduino robot program
-// *** Version: 2016.04.20
+// *** Version: 2016.04.21
 // *** Developer: Wolfgang Glück
 // ***
 // *** Supported hardware:
@@ -1123,73 +1123,72 @@ void loop()
       Serial.println(turnSlow90RightCommand);
       Serial.print("S@Align: ");
       Serial.println(alignCommand);
+
+      Serial.print("MV@Motor1 current: UL ");
+      Serial.println(motorStallLimit);
+      Serial.print("MV@Motor2 current: UL ");
+      Serial.println(motorStallLimit);
+      Serial.print("MV@Motor3 current: UL ");
+      Serial.println(motorStallLimit);
+      Serial.print("MV@Motor4 current: UL ");
+      Serial.println(motorStallLimit);
+      
+      Serial.print("MV@Motor1 current: V ");
+      Serial.println (motor1FinalValue);
+      Serial.print("MV@Motor1 current: UL_Exceeded ");
+      Serial.println(motor1Stall);
+    
+      Serial.print("MV@Motor2 current: V ");
+      Serial.println(motor2FinalValue);
+      Serial.print("MV@Motor2 current: UL_Exceeded ");
+      Serial.println(motor2Stall);
+    
+      Serial.print("MV@Motor3 current: V ");
+      Serial.println(motor3FinalValue);
+      Serial.print("MV@Motor3 current: UL_Exceeded ");
+      Serial.println(motor3Stall);
+    
+      Serial.print("MV@Motor4 current: V ");
+      Serial.println(motor4FinalValue);
+      Serial.print("MV@Motor4 current: UL_Exceeded ");
+      Serial.println(motor4Stall);
+  
+      Serial.print("MV@Roll: V ");
+      Serial.println(roll, DEC);
+      Serial.print("MV@Roll: UL_Exceeded ");
+      Serial.println(UrollLimitExceeded);
+      Serial.print("MV@Roll: LL_Exceeded ");
+      Serial.println(LrollLimitExceeded);
+    
+      Serial.print("MV@Pitch: V ");
+      Serial.println(pitch, DEC);
+      Serial.print("MV@Pitch: UL_Exceeded ");
+      Serial.println(UpitchLimitExceeded);
+      Serial.print("MV@Pitch: LL_Exceeded ");
+      Serial.println(LpitchLimitExceeded);
+    
+      Serial.print("MV@Actual angle: V ");
+      Serial.print(angle16 / 10, DEC);
+      Serial.print(".");
+      Serial.println(angle16 % 10, DEC);
+    
+      Serial.print("MV@Smoothed angle: V ");
+      Serial.print(intermediateAngle / 10, DEC);
+      Serial.print(".");
+      Serial.println(intermediateAngle % 10, DEC);
+    
+      Serial.print("MV@Turned angle: V ");
+      Serial.println(turnedAngle);
+  
+      Serial.print("S@Compass: ");
+      Serial.println(digitalRead(CMPS11_VCC));
+  
+      Serial.print("S@Amplifier: ");
+      Serial.println(digitalRead(amplifier_VCC));
+      
+      Serial.print("S@W-LAN disturbance: ");
+      Serial.println(wlanDisturbance);
     }
-
-    Serial.print("MV@Motor1 current: UL ");
-    Serial.println(motorStallLimit);
-    Serial.print("MV@Motor2 current: UL ");
-    Serial.println(motorStallLimit);
-    Serial.print("MV@Motor3 current: UL ");
-    Serial.println(motorStallLimit);
-    Serial.print("MV@Motor4 current: UL ");
-    Serial.println(motorStallLimit);
-    
-    Serial.print("MV@Motor1 current: V ");
-    Serial.println (motor1FinalValue);
-    Serial.print("MV@Motor1 current: UL_Exceeded ");
-    Serial.println(motor1Stall);
-  
-    Serial.print("MV@Motor2 current: V ");
-    Serial.println(motor2FinalValue);
-    Serial.print("MV@Motor2 current: UL_Exceeded ");
-    Serial.println(motor2Stall);
-  
-    Serial.print("MV@Motor3 current: V ");
-    Serial.println(motor3FinalValue);
-    Serial.print("MV@Motor3 current: UL_Exceeded ");
-    Serial.println(motor3Stall);
-  
-    Serial.print("MV@Motor4 current: V ");
-    Serial.println(motor4FinalValue);
-    Serial.print("MV@Motor4 current: UL_Exceeded ");
-    Serial.println(motor4Stall);
-
-    Serial.print("MV@Roll: V ");
-    Serial.println(roll, DEC);
-    Serial.print("MV@Roll: UL_Exceeded ");
-    Serial.println(UrollLimitExceeded);
-    Serial.print("MV@Roll: LL_Exceeded ");
-    Serial.println(LrollLimitExceeded);
-  
-    Serial.print("MV@Pitch: V ");
-    Serial.println(pitch, DEC);
-    Serial.print("MV@Pitch: UL_Exceeded ");
-    Serial.println(UpitchLimitExceeded);
-    Serial.print("MV@Pitch: LL_Exceeded ");
-    Serial.println(LpitchLimitExceeded);
-  
-    Serial.print("MV@Actual angle: V ");
-    Serial.print(angle16 / 10, DEC);
-    Serial.print(".");
-    Serial.println(angle16 % 10, DEC);
-  
-    Serial.print("MV@Smoothed angle: V ");
-    Serial.print(intermediateAngle / 10, DEC);
-    Serial.print(".");
-    Serial.println(intermediateAngle % 10, DEC);
-  
-    Serial.print("MV@Turned angle: V ");
-    Serial.println(turnedAngle);
-
-    Serial.print("S@Compass: ");
-    Serial.println(digitalRead(CMPS11_VCC));
-
-    Serial.print("S@Amplifier: ");
-    Serial.println(digitalRead(amplifier_VCC));
-    
-    Serial.print("S@W-LAN disturbance: ");
-    Serial.println(wlanDisturbance);
-    
     Serial.print("S@Emergency stop: ");
     Serial.println(emergencyStop);
 
@@ -1270,8 +1269,8 @@ void loop()
       }
       if (CommandString.startsWith("Turn slow 45 left")) {
         startAngle = angle16;                     // store start angle
-        turnAngleRelative = 420;
-        turnAngle = (3600 + angle16 - 420) % 3600;
+        turnAngleRelative = 430;
+        turnAngle = (3600 + angle16 - 430) % 3600;
         
         turnSlow45LeftCommand = true;
         turnSlowLeftToCommand = true;
@@ -1283,8 +1282,8 @@ void loop()
   
       if (CommandString.startsWith("Turn slow 45 right")) {
         startAngle = angle16;                     // store start angle
-        turnAngleRelative = 420;
-        turnAngle = (angle16 + 420) % 3600;
+        turnAngleRelative = 430;
+        turnAngle = (angle16 + 430) % 3600;
         
         turnSlow45RightCommand = true;
         turnSlowRightToCommand = true;  
@@ -1295,8 +1294,8 @@ void loop()
       }
       if (CommandString.startsWith("Turn slow 90 left")) {
         startAngle = angle16;                     // store start angle
-        turnAngleRelative = 870;
-        turnAngle = (3600 + angle16 - 870) % 3600;
+        turnAngleRelative = 880;
+        turnAngle = (3600 + angle16 - 880) % 3600;
         
         turnSlow90LeftCommand = true;
         turnSlowLeftToCommand = true;
@@ -1307,8 +1306,8 @@ void loop()
       }
       if (CommandString.startsWith("Turn slow 90 right")) {
         startAngle = angle16;                     // store start angle
-        turnAngleRelative = 870;
-        turnAngle = (angle16 + 870) % 3600;
+        turnAngleRelative = 880;
+        turnAngle = (angle16 + 880) % 3600;
                
         turnSlow90RightCommand = true;
         turnSlowRightToCommand = true;  
@@ -1323,19 +1322,26 @@ void loop()
         turnSlowLeftToCommand = false; turnSlowRightToCommand = false; turnFinished = false;
         motorStallLimit = motorStallLimitSlow;
 
-        startAngle = angle16;                     // store start angle
+        startAngle = angle16;                                                         // store start angle
 
         // calculate relative angle and decide direction left right
         CommandString.replace("Turn slow to: ", "");
         turnAngle = CommandString.toInt();                                            // Absolute angle to be turned to
-        i = (turnAngle - angle16);                                                    // +- 3600
+        i = (turnAngle - angle16);                                                     
         turnAngleRelative = i;
-        if (i < -1800) turnAngleRelative = i + 3600;
+        if (i < -1800) turnAngleRelative = i + 3600;                                  // decision turn left or right
         if (i > 1800) turnAngleRelative = i - 3600;
-        if (turnAngleRelative >= 0) turnSlowRightToCommand = true;                    // turn right to
-        else {
-          turnAngleRelative = abs(turnAngleRelative);
-          turnSlowLeftToCommand = true;                                               // turn left to
+        
+        if (turnAngleRelative >= 0) {                                                 // turn right to
+          turnAngle = (3600 + turnAngle - 20) % 3600;                                 // cycle tolerance
+          turnAngleRelative = (3600 + turnAngleRelative - 20) % 3600;
+          turnSlowRightToCommand = true;                                              
+        }
+        else {                                                                        // turn left to
+          turnAngleRelative = abs(turnAngleRelative);                                 
+          turnAngle = (3600 + turnAngle + 20) % 3600;                                 // cycle tolerance
+          turnAngleRelative = (3600 + turnAngleRelative - 20) % 3600;
+          turnSlowLeftToCommand = true;                                               
         }       
       }
      
