@@ -1208,8 +1208,11 @@ void loop()
 //    Serial.println(testPoint2);
 //    Serial.print("S@TestPoint3: ");
 //    Serial.println(testPoint3);
-//    Serial.print("I@Command: ");
-//    Serial.println(CommandStringS);
+      if (CommandStringS != ""){
+        Serial.print("I@Command: ");
+        Serial.println(CommandStringS);
+        CommandStringS = "";
+      }
   
     // Get command from USB interface
     // *************************************************************************************************************************************
