@@ -1,7 +1,7 @@
 
 //****************************************************************************************************************************************************
 // *** Arduino robot program
-// *** Version: 2016.04.21
+// *** Version: 2016.05.03
 // *** Developer: Wolfgang Glück
 // ***
 // *** Supported hardware:
@@ -128,10 +128,10 @@ boolean Arduino5VLow = false;
 
 // Motors
 // *******************************************************************************************************************************
-float motorStallLimit = 1.0;  // Stall limit for all motors
-float motorStallLimitSlow = 1.0;
-float motorStallLimitHalf = 1.0;
-float motorStallLimitFull = 1.2;
+float motorStallLimit = 1.4;  // Stall limit for all motors
+float motorStallLimitSlow = 1.4;
+float motorStallLimitHalf = 1.4;
+float motorStallLimitFull = 1.4;
 
 // Motor right front
 #define motor1Direction 32
@@ -190,11 +190,17 @@ boolean turnFinished = true;
 boolean alignCommand = false;
 boolean alignTrue = false;
 int stopDutyCycle           =   0;   //   0% of 256
-int slowDutyCycle           =  64;   //  25% of 256
-int halfDutyCycle           = 128;   //  50% of 256
-int fullDutyCycle           = 213;   //  80% of 256, contains reserve for steering
+int slowDutyCycle12T        =  80;   //  30% of 256 for turning only
+int slowDutyCycle34T        =  80;   //             for turning only
+int slowDutyCycle12         =  80;   //  30% of 256
+int slowDutyCycle34         = 100;   //  compensation of mechanical differences
+int halfDutyCycle12         = 128;   //  
+int halfDutyCycle34         = 128;   //  50% of 256
+int fullDutyCycle12         = 212;   //  
+int fullDutyCycle34         = 212;   //  80% of 256, contains 20% reserve for steering
 int steeringRate            = 20;    //    % of DutyCycle
-int steeringDutyCycle       = 0;     // Calculated dutyCycle
+int steeringDutyCycle12     = 0;     // Calculated dutyCycle
+int steeringDutyCycle34     = 0;     // Calculated dutyCycle
 
 // Arrays and variables for alignment algorithm
 float SrL [10] [6] = {{1.0, 0.0, 0.0, 0.0, 0.0, 0.0},   // Left: 0  1   2    3      4      5
@@ -295,25 +301,26 @@ void MotorControl()
     digitalWrite(motor2Direction, forward);
     digitalWrite(motor3Direction, forward);
     digitalWrite(motor4Direction, forward);
-    steeringDutyCycle = slowDutyCycle + (slowDutyCycle * steeringRate / 100);
+    steeringDutyCycle12 = slowDutyCycle12 + (slowDutyCycle12 * steeringRate / 100);
+    steeringDutyCycle34 = slowDutyCycle34 + (slowDutyCycle34 * steeringRate / 100);
     if (steeringLeftCommand) {
-      analogWrite(motor1PWM, steeringDutyCycle);// Steering Left
-      analogWrite(motor2PWM, steeringDutyCycle);
-      analogWrite(motor3PWM, slowDutyCycle);
-      analogWrite(motor4PWM, slowDutyCycle);
+      analogWrite(motor1PWM, steeringDutyCycle12);// Steering Left
+      analogWrite(motor2PWM, steeringDutyCycle12);
+      analogWrite(motor3PWM, slowDutyCycle34);
+      analogWrite(motor4PWM, slowDutyCycle34);
     }
     else {
       if (steeringRightCommand) {
-        analogWrite(motor1PWM, slowDutyCycle);  // Steering Right
-        analogWrite(motor2PWM, slowDutyCycle);
-        analogWrite(motor3PWM, steeringDutyCycle);
-        analogWrite(motor4PWM, steeringDutyCycle);
+        analogWrite(motor1PWM, slowDutyCycle12);  // Steering Right
+        analogWrite(motor2PWM, slowDutyCycle12);
+        analogWrite(motor3PWM, steeringDutyCycle34);
+        analogWrite(motor4PWM, steeringDutyCycle34);
       }
       else {
-        analogWrite(motor1PWM, slowDutyCycle);  // Steering ahead
-        analogWrite(motor2PWM, slowDutyCycle);
-        analogWrite(motor3PWM, slowDutyCycle);
-        analogWrite(motor4PWM, slowDutyCycle);
+        analogWrite(motor1PWM, slowDutyCycle12);  // Steering ahead
+        analogWrite(motor2PWM, slowDutyCycle12);
+        analogWrite(motor3PWM, slowDutyCycle34);
+        analogWrite(motor4PWM, slowDutyCycle34);
       }
     }
   }
@@ -323,25 +330,26 @@ void MotorControl()
     digitalWrite(motor2Direction, forward);
     digitalWrite(motor3Direction, forward);
     digitalWrite(motor4Direction, forward);
-    steeringDutyCycle = halfDutyCycle + (halfDutyCycle * steeringRate / 100);
+    steeringDutyCycle12 = halfDutyCycle12 + (halfDutyCycle12 * steeringRate / 100);
+    steeringDutyCycle34 = halfDutyCycle34 + (halfDutyCycle34 * steeringRate / 100);
     if (steeringLeftCommand) {
-      analogWrite(motor1PWM, steeringDutyCycle);// Steering Left
-      analogWrite(motor2PWM, steeringDutyCycle);
-      analogWrite(motor3PWM, halfDutyCycle);
-      analogWrite(motor4PWM, halfDutyCycle);
+      analogWrite(motor1PWM, steeringDutyCycle12);// Steering Left
+      analogWrite(motor2PWM, steeringDutyCycle12);
+      analogWrite(motor3PWM, halfDutyCycle34);
+      analogWrite(motor4PWM, halfDutyCycle34);
     }
     else {
       if (steeringRightCommand) {
-        analogWrite(motor1PWM, halfDutyCycle);  // Steering Right
-        analogWrite(motor2PWM, halfDutyCycle);
-        analogWrite(motor3PWM, steeringDutyCycle);
-        analogWrite(motor4PWM, steeringDutyCycle);
+        analogWrite(motor1PWM, halfDutyCycle12);  // Steering Right
+        analogWrite(motor2PWM, halfDutyCycle12);
+        analogWrite(motor3PWM, steeringDutyCycle34);
+        analogWrite(motor4PWM, steeringDutyCycle34);
       }
       else {
-        analogWrite(motor1PWM, halfDutyCycle);  // Steering ahead
-        analogWrite(motor2PWM, halfDutyCycle);
-        analogWrite(motor3PWM, halfDutyCycle);
-        analogWrite(motor4PWM, halfDutyCycle);
+        analogWrite(motor1PWM, halfDutyCycle12);  // Steering ahead
+        analogWrite(motor2PWM, halfDutyCycle12);
+        analogWrite(motor3PWM, halfDutyCycle34);
+        analogWrite(motor4PWM, halfDutyCycle34);
       }
     }
   }
@@ -351,25 +359,26 @@ void MotorControl()
     digitalWrite(motor2Direction, forward);
     digitalWrite(motor3Direction, forward);
     digitalWrite(motor4Direction, forward);
-    steeringDutyCycle = fullDutyCycle + (fullDutyCycle * steeringRate / 100);
+    steeringDutyCycle12 = fullDutyCycle12 + (fullDutyCycle12 * steeringRate / 100);
+    steeringDutyCycle34 = fullDutyCycle34 + (fullDutyCycle34 * steeringRate / 100);
     if (steeringLeftCommand) {
-      analogWrite(motor1PWM, steeringDutyCycle);// Steering Left
-      analogWrite(motor2PWM, steeringDutyCycle);
-      analogWrite(motor3PWM, fullDutyCycle);
-      analogWrite(motor4PWM, fullDutyCycle);
+      analogWrite(motor1PWM, steeringDutyCycle12);// Steering Left
+      analogWrite(motor2PWM, steeringDutyCycle12);
+      analogWrite(motor3PWM, fullDutyCycle34);
+      analogWrite(motor4PWM, fullDutyCycle34);
     }
     else {
       if (steeringRightCommand) {
-        analogWrite(motor1PWM, fullDutyCycle);  // Steering Right
-        analogWrite(motor2PWM, fullDutyCycle);
-        analogWrite(motor3PWM, steeringDutyCycle);
-        analogWrite(motor4PWM, steeringDutyCycle);
+        analogWrite(motor1PWM, fullDutyCycle12);  // Steering Right
+        analogWrite(motor2PWM, fullDutyCycle12);
+        analogWrite(motor3PWM, steeringDutyCycle34);
+        analogWrite(motor4PWM, steeringDutyCycle34);
       }
       else {
-        analogWrite(motor1PWM, fullDutyCycle);  // Steering ahead
-        analogWrite(motor2PWM, fullDutyCycle);
-        analogWrite(motor3PWM, fullDutyCycle);
-        analogWrite(motor4PWM, fullDutyCycle);
+        analogWrite(motor1PWM, fullDutyCycle12);  // Steering ahead
+        analogWrite(motor2PWM, fullDutyCycle12);
+        analogWrite(motor3PWM, fullDutyCycle34);
+        analogWrite(motor4PWM, fullDutyCycle34);
       }
     }
   }
@@ -380,10 +389,10 @@ void MotorControl()
     digitalWrite(motor2Direction, backward);
     digitalWrite(motor3Direction, forward);
     digitalWrite(motor4Direction, forward);
-    analogWrite(motor1PWM, slowDutyCycle);
-    analogWrite(motor2PWM, slowDutyCycle);
-    analogWrite(motor3PWM, slowDutyCycle);
-    analogWrite(motor4PWM, slowDutyCycle);
+    analogWrite(motor1PWM, slowDutyCycle12T);
+    analogWrite(motor2PWM, slowDutyCycle12T);
+    analogWrite(motor3PWM, slowDutyCycle34T);
+    analogWrite(motor4PWM, slowDutyCycle34T);
     
     if (((startAngle - angle16) < 0) && ((startAngle - angle16) > -10)) turnedAngle = 0; // Filter measuring faults (-9..-1)
     else turnedAngle = (3600 + startAngle - angle16) % 3600;                             // calculate turned angle
@@ -425,10 +434,10 @@ void MotorControl()
     digitalWrite(motor2Direction, forward);
     digitalWrite(motor3Direction, backward);
     digitalWrite(motor4Direction, backward);
-    analogWrite(motor1PWM, slowDutyCycle);
-    analogWrite(motor2PWM, slowDutyCycle);
-    analogWrite(motor3PWM, slowDutyCycle);
-    analogWrite(motor4PWM, slowDutyCycle);
+    analogWrite(motor1PWM, slowDutyCycle12T);
+    analogWrite(motor2PWM, slowDutyCycle12T);
+    analogWrite(motor3PWM, slowDutyCycle34T);
+    analogWrite(motor4PWM, slowDutyCycle34T);
     
     if (((angle16 - startAngle) < 0) && ((angle16 - startAngle) > -10)) turnedAngle = 0; // Filter measuring faults (-9..-1)
     else turnedAngle = (3600 + angle16 - startAngle) % 3600;                             // calculate turned angle
@@ -537,7 +546,7 @@ void QuadratureEncoderInit(void)
   return;
 }
 
-int16_t QuadratureEncoderReadLt( void ) // read single step encoders (works correct)
+int16_t QuadratureEncoderReadLt( void ) // read single step encoders
 {
   int16_t val;
   cli();
@@ -593,6 +602,7 @@ boolean distancebLeftObstruction = false;
 #define distanceFrontLimit 20
 int distanceFrontPulseTime = 0;
 int distanceFrontCm = 0;
+int distanceFrontReg[4] = {0, 0, 0, 0};
 boolean distanceFrontObstruction = false;
 
 #define distanceDownLimit 15
@@ -613,7 +623,7 @@ int distanceDownRawValue = 0;
 
 // Others
 // *************************************************************************************************************************
-int i;
+int i, j;
 #define ledPin 13                 // LED for heart beat
 #define baud 38400                // Transmission speed for serial
 int testPoint1 = 0;
@@ -802,6 +812,7 @@ void loop()
   angle16 += 1800;                           // correction of 180 degrees mounting difference to heading
   angle16 = angle16 % 3600;
   if ((angle16 >= 3595) || (angle16 <= 5)) angle16 = 0;               // Hysteresis +- 0.5 degree arount 0 degrees
+//****************************************************************************************************************
 
   if (turnFinished == true){
     // calculate sliding intermediate value over the last 10 values if no turn is running (shorten cycle time)
@@ -827,17 +838,17 @@ void loop()
     else intermediateAngle = 3600 - (angle * 1800 / PI);
     if (intermediateAngle == 3600) intermediateAngle = 0;
 
-  
-    // Read distances to obstructions if no turn comman is running (shorten cycle time)
+
+    // Read distances to obstructions (US-015 contains a temperature compensation)
     // *************************************************************************************************************************************
     digitalWrite(distancefLeftTrig, LOW);                               // front Left
-    delayMicroseconds(5);                                               // ****
+    delayMicroseconds(5);                                               // **********
     digitalWrite(distancefLeftTrig, HIGH);
     delayMicroseconds(10);
     digitalWrite(distancefLeftTrig, LOW);
-    distancefLeftPulseTime = pulseIn(distancefLeftEcho, HIGH, 12000);    // Range limited to 200cm (timeout delivers 0)
-    if (distancefLeftPulseTime > 60) {                                  // disturbance filter
-      distancefLeftCm = distancefLeftPulseTime / 29 / 2;
+    distancefLeftPulseTime = pulseIn(distancefLeftEcho, HIGH, 23600);   // Range limited to 2 x 200cm (timeout delivers 0)
+    if (distancefLeftPulseTime > 60) {                                  // filter 0 of timeout 
+      distancefLeftCm = distancefLeftPulseTime / 59;                    // 29.4us / cm (two ways) 
     }
     else { 
       distancefLeftCm = 210;                                            // out of range
@@ -845,13 +856,13 @@ void loop()
     distancefLeftObstruction = (distancefLeftCm < distancefLeftLimit);  // Obstruction detected front left
   
     digitalWrite(distancefRightTrig, LOW);                              // front Right
-    delayMicroseconds(5);                                               // *****
+    delayMicroseconds(5);                                               // ***********
     digitalWrite(distancefRightTrig, HIGH);
     delayMicroseconds(10);
     digitalWrite(distancefRightTrig, LOW);
-    distancefRightPulseTime = pulseIn(distancefRightEcho, HIGH, 12000);  // Range limited to 200cm
+    distancefRightPulseTime = pulseIn(distancefRightEcho, HIGH, 23600);  // Range limited to 200cm
     if (distancefRightPulseTime > 60) {                                  // disturbance filter
-      distancefRightCm = distancefRightPulseTime / 29 / 2;
+      distancefRightCm = distancefRightPulseTime / 59;
     }
     else {
       distancefRightCm = 210;                                            // out of range
@@ -860,13 +871,13 @@ void loop()
     
     
   //  digitalWrite(distancebLeftTrig, LOW);                               // back Left
-  //  delayMicroseconds(5);                                               // ****
+  //  delayMicroseconds(5);                                               // *********
   //  digitalWrite(distancebLeftTrig, HIGH);
   //  delayMicroseconds(10);
   //  digitalWrite(distancebLeftTrig, LOW);
-  //  distancebLeftPulseTime = pulseIn(distancebLeftEcho, HIGH, 12000);
+  //  distancebLeftPulseTime = pulseIn(distancebLeftEcho, HIGH, 23600);
   //  if (distancebLeftPulseTime > 60) {                                  // disturbance filter
-  //    distancebLeftCm = distancebLeftPulseTime / 29 / 2;
+  //    distancebLeftCm = distancebLeftPulseTime / 59;
   //  }
   //  else {
   //    distancebLeftCm = 210;                                            // out of range
@@ -874,13 +885,13 @@ void loop()
   //  distancebLeftObstruction = (distancebLeftCm < distancebLeftLimit);// Obstruction detected back left
   //  
   //  digitalWrite(distancebRightTrig, LOW);                              // back Right
-  //  delayMicroseconds(5);                                               // *****
+  //  delayMicroseconds(5);                                               // **********
   //  digitalWrite(distancebRightTrig, HIGH);
   //  delayMicroseconds(10);
   //  digitalWrite(distancebRightTrig, LOW);
-  //  distancebRightPulseTime = pulseIn(distancebRightEcho, HIGH, 12000);
+  //  distancebRightPulseTime = pulseIn(distancebRightEcho, HIGH, 23600);
   //  if (distancebRightPulseTime > 60) {                                 // disturbance filter
-  //    distancebRightCm = distancebRightPulseTime / 29 / 2;
+  //    distancebRightCm = distancebRightPulseTime / 59;
   //  }
   //  else {
   //    distancebRightCm = 210;                                           // out of range
@@ -960,29 +971,44 @@ void loop()
         steeringLeftCommand = true;
       }
     }
-  
-    digitalWrite(distanceFrontTrig, LOW);                               // Front
-    delayMicroseconds(5);                                               // *****
-    digitalWrite(distanceFrontTrig, HIGH);
-    delayMicroseconds(10);
-    digitalWrite(distanceFrontTrig, LOW);
-    distanceFrontPulseTime = pulseIn(distanceFrontEcho, HIGH, 12000);   // Range limited to 200cm
-    if (distanceFrontPulseTime > 60) {                                  // disturbance filter
-      distanceFrontCm = distanceFrontPulseTime / 29 / 2;
+                                                                          // Front
+                                                                          // *****
+    for (j = 0; j < 2; j++){                                              // 2 measures per cycle        
+      digitalWrite(distanceFrontTrig, LOW);                               
+      delayMicroseconds(20);                                              
+      digitalWrite(distanceFrontTrig, HIGH);
+      delayMicroseconds(10);
+      digitalWrite(distanceFrontTrig, LOW);
+      distanceFrontPulseTime = pulseIn(distanceFrontEcho, HIGH, 47200);   // Range limited to 2 x 400cm (timeout delivers 0)
+      if (distanceFrontPulseTime > 60) {                                  // filter for timeout
+        distanceFrontCm = distanceFrontPulseTime / 59;                    // 340m/s = 29.4 us/cm for two ways
+        
+        for (i = 3; i > 0; i --){
+          distanceFrontReg[i] = distanceFrontReg[i-1];                    // shift register one step right
+        }
+        distanceFrontReg[0] = distanceFrontCm;                            // put new value to register
+
+      }
     }
-    else {
-      distanceFrontCm = 210;                                            // out of range
+    
+    distanceFrontCm = 0;
+    for (i= 0; i < 3; i ++){
+      distanceFrontCm = distanceFrontCm + distanceFrontReg[i];
     }
-    distanceFrontObstruction = (distanceFrontCm < distanceFrontLimit);// Obstruction detected front side
+    distanceFrontCm = int(distanceFrontCm/3);                             // mean value from last 3 valid values
+      
+    
+    distanceFrontObstruction = (distanceFrontCm < distanceFrontLimit);    // Obstruction detected front side
+    
   
     digitalWrite(distanceUpTrig, LOW);                                  // Up
     delayMicroseconds(5);                                               // **
     digitalWrite(distanceUpTrig, HIGH);
     delayMicroseconds(10);
     digitalWrite(distanceUpTrig, LOW);
-    distanceUpPulseTime = pulseIn(distanceUpEcho, HIGH, 17000);         // Range limited to 300cm
+    distanceUpPulseTime = pulseIn(distanceUpEcho, HIGH, 35400);         // Range limited to 2 x 300cm
     if (distanceUpPulseTime > 60) {                                     // disturbance filter
-      distanceUpCm = distanceUpPulseTime / 29 / 2;
+      distanceUpCm = distanceUpPulseTime / 59;
     }
     else {
       distanceUpCm = 310;                                               // out of range
@@ -996,7 +1022,7 @@ void loop()
     distanceDownCm = (4800 / (distanceDownRawValue - 20));           
     distanceDownObstruction = (distanceDownCm > distanceDownLimit);     // Obstruction detected
   }
-
+  
   // Build and execute emergency stop
   // *************************************************************************************************************************************
 
@@ -1194,8 +1220,6 @@ void loop()
 
     Serial.print("S@Stop: ");
     Serial.println(forwardStopCommand);  
-
-
     
 //    Serial.print("MV@Distance down raw value: "); // For test reasons only
 //    Serial.println(distanceDownRawValue);         // For test reasons only
@@ -1208,11 +1232,12 @@ void loop()
 //    Serial.println(testPoint2);
 //    Serial.print("S@TestPoint3: ");
 //    Serial.println(testPoint3);
-      if (CommandStringS != ""){
-        Serial.print("I@Command: ");
-        Serial.println(CommandStringS);
-        CommandStringS = "";
-      }
+
+    if (CommandStringS != ""){
+      Serial.print("I@Command: ");
+      Serial.println(CommandStringS);
+      CommandStringS = "";
+    }
   
     // Get command from USB interface
     // *************************************************************************************************************************************
@@ -1272,8 +1297,8 @@ void loop()
       }
       if (CommandString.startsWith("Turn slow 45 left")) {
         startAngle = angle16;                     // store start angle
-        turnAngleRelative = 430;
-        turnAngle = (3600 + angle16 - 430) % 3600;
+        turnAngleRelative = 420;
+        turnAngle = (3600 + angle16 - 420) % 3600;
         
         turnSlow45LeftCommand = true;
         turnSlowLeftToCommand = true;
@@ -1285,8 +1310,8 @@ void loop()
   
       if (CommandString.startsWith("Turn slow 45 right")) {
         startAngle = angle16;                     // store start angle
-        turnAngleRelative = 430;
-        turnAngle = (angle16 + 430) % 3600;
+        turnAngleRelative = 420;
+        turnAngle = (angle16 + 420) % 3600;
         
         turnSlow45RightCommand = true;
         turnSlowRightToCommand = true;  
@@ -1297,8 +1322,8 @@ void loop()
       }
       if (CommandString.startsWith("Turn slow 90 left")) {
         startAngle = angle16;                     // store start angle
-        turnAngleRelative = 880;
-        turnAngle = (3600 + angle16 - 880) % 3600;
+        turnAngleRelative = 870;
+        turnAngle = (3600 + angle16 - 870) % 3600;
         
         turnSlow90LeftCommand = true;
         turnSlowLeftToCommand = true;
@@ -1309,8 +1334,8 @@ void loop()
       }
       if (CommandString.startsWith("Turn slow 90 right")) {
         startAngle = angle16;                     // store start angle
-        turnAngleRelative = 880;
-        turnAngle = (angle16 + 880) % 3600;
+        turnAngleRelative = 870;
+        turnAngle = (angle16 + 870) % 3600;
                
         turnSlow90RightCommand = true;
         turnSlowRightToCommand = true;  
@@ -1336,14 +1361,14 @@ void loop()
         if (i > 1800) turnAngleRelative = i - 3600;
         
         if (turnAngleRelative >= 0) {                                                 // turn right to
-          turnAngle = (3600 + turnAngle - 20) % 3600;                                 // cycle tolerance
-          turnAngleRelative = (3600 + turnAngleRelative - 20) % 3600;
+          turnAngle = (3600 + turnAngle - 40) % 3600;                                 // cycle tolerance
+          turnAngleRelative = (3600 + turnAngleRelative - 40) % 3600;
           turnSlowRightToCommand = true;                                              
         }
         else {                                                                        // turn left to
           turnAngleRelative = abs(turnAngleRelative);                                 
-          turnAngle = (3600 + turnAngle + 20) % 3600;                                 // cycle tolerance
-          turnAngleRelative = (3600 + turnAngleRelative - 20) % 3600;
+          turnAngle = (3600 + turnAngle + 40) % 3600;                                 // cycle tolerance
+          turnAngleRelative = (3600 + turnAngleRelative - 40) % 3600;
           turnSlowLeftToCommand = true;                                               
         }       
       }
