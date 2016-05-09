@@ -1,25 +1,21 @@
 
 //****************************************************************************************************************************************************
-// *** Arduino robot program
-// *** Version: 2016.05.04
+// *** Arduino robot program V2
+// *** Version: 2016.05.09
 // *** Developer: Wolfgang Glück
 // ***
 // *** Supported hardware:
-// ***   - Rover5 chassis with 4 motors and encoders                (2 encoders used only)
-// ***   - Rover5 chassis with 2 motors and encoders                (optional, just remove the unused parts of code)
+// ***   - 4 motors 12V with gear and encoder                       (2 encoders used only)
 // ***   - Motor control board (MCB) for 4 motors and encoders
-// ***   - Motor control Board (MCB) for 2 motors and encoders      (optional)
 // ***   - Arduino mega                                             (Spider)
 // ***   - Compass                                                  (CMPS11 via 10cm I2C bus, using internal pullups by default)
 // ***                                                              (For calibration use separated program CPMS11Calibration)
-// ***   - 6 x Ultra-sonic sensor                                   (US-015)
+// ***   - 4 x Ultra-sonic sensor                                   (Type under investigation)
 // ***   - 1 x Infra red Sensor                                     (Sharp 2Y0A21)
-// ***   - 7,2 V Battery for MCB and drives                         (6x 1,2 V NiMH Akku type D 10'000 mAh, same battery pack as for 9,6 V)
-// ***   - 9,6 V Battery for Arduino and MCB                        (8x 1,2 V NiMH Akku type D 10'000 mAh)
-// ***   - Battery holder for 8 type D cells
+// ***   - 11,1 V Battery for Drives, Arduino and MCB               (LiPO Akku 3S 11.1V 10'000 mAh)
 // ***   - 5 V / Gnd     for MCB is connected to Arduino 5 V / Gnd
 // ***   - 5 V   Battery for Raspberry pi                           (VOLTCRAFT 20800 mAh PB-19 POWERBANK)
-// ***   - 5 Resistors as voltage divider                           (4,7 kOhm 0,5 W)
+// ***   - 3 Resistors                                              (4,7 kOhm 0,5 W)
 // ***   - Audio amplifier                                          (KEMO M031N 3.5 W 4.5 - 12 V, operated at 9,6 V Battery)
 // ***   - Laudspeaker                                              (LSM-28M/NT-B, 8 OHM, 2W)
 // ***   - FET Transitor for switching audio amlifier on/off        (IRL3803PbF)
@@ -33,7 +29,7 @@
 // ***   - USB cable from Raspberry pi to Arduino
 // ***
 // *** Functions:
-// ***   - (ok) One time compass calibration. For this, code adjustments have to be done manually (see comments under setup)
+// ***   - (ok) One time compass calibration. Use separate program
 // ***   - (ok) Read and supervise analog values like battery voltage and motor current
 // ***   - (ok) Read compass values via I2C
 // ***   - (ok) smoothe compass value for a calm display
@@ -42,7 +38,8 @@
 // ***   - (ok) Read obstruction distances
 // ***   - (ok) Send analog and digital values to USB interface
 // ***   - (ok) Get and execute driving commands via USB interface (transition beween driving commands directly is allowed)
-// ***          (Stop, ForwardSlow, ForwardHalf, ForwardFull, SteeringAhead, SteeringLeft, SteeringRight in combination with Forward Commands)
+// ***          (Stop, ForwardSlow, ForwardHalf, ForwardFull)
+// ***          (SteeringAhead, SteeringLeft, SteeringRight in combination with Forward Commands)
 // ***          (TurnSlow45Left, TurnSlow45Right, TurnSlow90Left, TurnSlow90Right, turnSlowTo value)
 // ***   - (ok) get switch on/off command for audio amplifier
 // ***   - (ok) Get reset command for encoder values
