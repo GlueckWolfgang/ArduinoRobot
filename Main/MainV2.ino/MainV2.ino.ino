@@ -1,16 +1,16 @@
 
 //****************************************************************************************************************************************************
 // *** Arduino robot program V2
-// *** Version: 2016.05.09
+// *** Version: 2016.05.13
 // *** Developer: Wolfgang Glück
 // ***
 // *** Supported hardware:
-// ***   - 4 motors 12V with gear and encoder                       (2 encoders used only)
+// ***   - 4 motors 12V with gear and encoder                       (EMG30, Manu systems AG)
 // ***   - Motor control board (MCB) for 4 motors and encoders
 // ***   - Arduino mega                                             (Spider)
 // ***   - Compass                                                  (CMPS11 via 10cm I2C bus, using internal pullups by default)
 // ***                                                              (For calibration use separated program CPMS11Calibration)
-// ***   - 4 x Ultra-sonic sensor                                   (Type under investigation)
+// ***   - 4 x Ultra-sonic sensor                                   (MB7076 XL-MaxSonar-WRLA1, MaxBotix)
 // ***   - 1 x Infra red Sensor                                     (Sharp 2Y0A21)
 // ***   - 11,1 V Battery for Drives, Arduino and MCB               (LiPO Akku 3S 11.1V 10'000 mAh)
 // ***   - 5 V / Gnd     for MCB is connected to Arduino 5 V / Gnd
