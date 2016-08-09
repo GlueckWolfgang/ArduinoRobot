@@ -1,30 +1,25 @@
 
 //****************************************************************************************************************************************************
-// *** Arduino robot program V2
-// *** Version: 2016.05.13
+// *** Arduino robot program V3
+// *** Version: 2016.08.09
 // *** Developer: Wolfgang Glück
 // ***
 // *** Supported hardware:
-// ***   - 4 motors 12V with gear and encoder                       (EMG30, Manu systems AG)
-// ***   - Motor control board (MCB) for 4 motors and encoders
+// ***   - 2 motors 12V with gear and encoder                       (EMG30, Manu systems AG)
+// ***   - Motor control board (MCB)
+// ***   - Steering gear with servo                                 (HPI Buggy flux axle stubs 0 degrees)
 // ***   - Arduino mega                                             (Spider)
 // ***   - Compass                                                  (CMPS11 via 10cm I2C bus, using internal pullups by default)
 // ***                                                              (For calibration use separated program CPMS11Calibration)
 // ***   - 4 x Ultra-sonic sensor                                   (MB7076 XL-MaxSonar-WRLA1, MaxBotix)
 // ***   - 1 x Infra red Sensor                                     (Sharp 2Y0A21)
-// ***   - 11,1 V Battery for Drives, Arduino and MCB               (LiPO Akku 3S 11.1V 10'000 mAh)
+// ***   - 11,1 V Battery for Drives, Arduino and MCB               (LiPO Akku 3S 11.1V 10'000 mAh; Connector Balancer XH, Connector Power EC-5)
 // ***   - 5 V / Gnd     for MCB is connected to Arduino 5 V / Gnd
-// ***   - 5 V   Battery for Raspberry pi                           (VOLTCRAFT 20800 mAh PB-19 POWERBANK)
-// ***   - 3 Resistors                                              (4,7 kOhm 0,5 W)
-// ***   - Audio amplifier                                          (KEMO M031N 3.5 W 4.5 - 12 V, operated at 9,6 V Battery)
-// ***   - Laudspeaker                                              (LSM-28M/NT-B, 8 OHM, 2W)
-// ***   - FET Transitor for switching audio amlifier on/off        (IRL3803PbF)
-// ***   - Potentiometer for volume regulation                      (10 kOhm)
+// ***   - 5 V   Battery for Raspberry pi                           (VOLTCRAFT Li-Io 20800 mAh PB-19 POWERBANK, Connector Charging cabele USB Micro, Connector Power USB 2A)
 // ***
 // ***   - Raspberry pi 2
 // ***   - SD card 32GB
 // ***   - camera
-// ***   - USB Sound card                                           (Speedlink VIGO USB Soundcard)
 // ***   - W-LAN adapter                                            (EW-7612UAN V2)
 // ***   - USB cable from Raspberry pi to Arduino
 // ***
@@ -32,16 +27,16 @@
 // ***   - (ok) One time compass calibration. Use separate program
 // ***   - (ok) Read and supervise analog values like battery voltage and motor current
 // ***   - (ok) Read compass values via I2C
-// ***   - (ok) smoothe compass value for a calm display
+// ***   - (ok) Smoothe compass value for a calm display
 // ***   - (ok) Supervise roll and pitch
 // ***   - (ok) Read encoders
-// ***   - (ok) Read obstruction distances
+// ***   - (ok) Read distances
 // ***   - (ok) Send analog and digital values to USB interface
 // ***   - (ok) Get and execute driving commands via USB interface (transition beween driving commands directly is allowed)
 // ***          (Stop, ForwardSlow, ForwardHalf, ForwardFull)
 // ***          (SteeringAhead, SteeringLeft, SteeringRight in combination with Forward Commands)
 // ***          (TurnSlow45Left, TurnSlow45Right, TurnSlow90Left, TurnSlow90Right, turnSlowTo value)
-// ***   - (ok) get switch on/off command for audio amplifier
+// ***   - (ok) Get switch on/off command for audio amplifier
 // ***   - (ok) Get reset command for encoder values
 // ***   - (ok) Get status about W-LAN from USB interface
 // ***   - (ok) Get switch command on/off for audio amplifier
@@ -54,11 +49,22 @@
 // Definitions
 // *************************************************************************************************************************
 // *************************************************************************************************************************
+#include <math.h>
+#include <Wire.h>
+#include <Servo.h>
+
+// Servo
+// *************************************************************************************************************************
+Servo steeringservo;
+#define ServoPWM 7
+#define ServoMiddle 90
+#define ServoExtreme 35
+#define ServoLeft ServoMiddle-ServoExtreme
+#define ServoRight ServoMiddle+ServoExtreme
+
 
 // Compass
 // *************************************************************************************************************************
-#include <math.h>
-#include <Wire.h>
 #define CMPS11_VCC 22        // VCC for dynamic power on via digital output
 #define CMPS11_ADDRESS 0x60  // Address of CMPS11 shifted right one bit for arduino wire library
 #define CMPS11_Byte1 0xF0    // command for calibration
@@ -99,17 +105,11 @@ boolean usbDisturbance = false;   // if USB interface is not ready
 
 // Batteries
 // **************************************************************************************************************************
-#define battery9VProbe A0    // wire to battery via 1:1 voltage divider with 4.7kOhm resistors
-int battery9VRawValue = 0;
-float battery9VFinalValue = 0.0;
-float battery9VLowerLimit = 8.0;
-boolean battery9VLow = false;
-
-#define battery7VProbe A1    // wire to battery via 1:1 voltage divider with 4.7 kOhm resistors
-int battery7VRawValue = 0;
-float battery7VFinalValue = 0.0;
-float battery7VLowerLimit = 6.0;
-boolean battery7VLow = false;
+#define battery12VProbe A0    // wire to battery via 1:3 voltage divider
+int battery12VRawValue = 0;
+float battery12VFinalValue = 0.0;
+float battery12VLowerLimit = 11.1;
+boolean battery12VLow = false;
 
 #define battery5VProbe A2     // supervision of power bank, wire from Raspberry pi 5V via 4.7 kOhm resistor
 int battery5VRawValue = 0;
@@ -117,20 +117,20 @@ float battery5VFinalValue = 0.0;
 float battery5VLowerLimit = 4.5;
 boolean battery5VLow = false;
 
-#define Arduino5VProbe A3     // supervision of Arduino 5 V
+#define Arduino5VProbe A3     // supervision of Arduino 5 V, wire from Arduino 5V via 4.7 kOhm resistor
 int Arduino5VRawValue = 0;
 float Arduino5VFinalValue = 0.0;
 float Arduino5VLowerLimit = 4.5;
 boolean Arduino5VLow = false;
 
-// Motors
+// Motor
 // *******************************************************************************************************************************
-float motorStallLimit = 1.4;  // Stall limit for all motors
-float motorStallLimitSlow = 1.4;
-float motorStallLimitHalf = 1.4;
-float motorStallLimitFull = 1.4;
+float motorStallLimit = 2.4;  // Stall limit
+float motorStallLimitSlow = 1.0;
+float motorStallLimitHalf = 1.8;
+float motorStallLimitFull = 2.4;
 
-// Motor right front
+// Motor right back
 #define motor1Direction 32
 #define motor1PWM 6
 #define motor1CurrentProbe A15
@@ -138,27 +138,13 @@ int motor1RawValue = 0;
 float motor1FinalValue = 0.0;
 boolean motor1Stall = false;
 
-//Motor right back
-#define motor2Direction 33
-#define motor2PWM 7
-#define motor2CurrentProbe A14
-int motor2RawValue = 0;
-float motor2FinalValue = 0.0;
-boolean motor2Stall = false;
-
+// Motor left back
 #define motor3Direction 30
 #define motor3PWM 2
 #define motor3CurrentProbe A13
 int motor3RawValue = 0;
 float motor3FinalValue = 0.0;
 boolean motor3Stall = false;
-
-#define motor4Direction 31
-#define motor4PWM 3
-#define motor4CurrentProbe A12
-int motor4RawValue = 0;
-float motor4FinalValue = 0.0;
-boolean motor4Stall = false;
 
 // Motor control
 // *******************************************************************************************************************************
@@ -187,13 +173,13 @@ boolean turnFinished = true;
 boolean alignCommand = false;
 boolean alignTrue = false;
 int stopDutyCycle           =   0;   //   0% of 256
-int slowDutyCycle12T        =  80;   //  30% of 256 for turning only
-int slowDutyCycle34T        =  80;   //             for turning only
-int slowDutyCycle12         =  80;   //  30% of 256
-int slowDutyCycle34         = 100;   //  compensation of mechanical differences
-int halfDutyCycle12         = 128;   //  
+int slowDutyCycle12T        =  150;  //  for turning only
+int slowDutyCycle34T        =  150;  //  for turning only
+int slowDutyCycle12         =  65;   //  30% of 256
+int slowDutyCycle34         =  80;   //
+int halfDutyCycle12         = 113;   //  
 int halfDutyCycle34         = 128;   //  50% of 256
-int fullDutyCycle12         = 212;   //  
+int fullDutyCycle12         = 197;   //  
 int fullDutyCycle34         = 212;   //  80% of 256, contains 20% reserve for steering
 int steeringRate            = 20;    //    % of DutyCycle
 int steeringDutyCycle12     = 0;     // Calculated dutyCycle
@@ -259,7 +245,7 @@ else{
      Sdxi2    = Sdxi2 + Sr[i][5];                        // sum (dxi2)
     }
     
-    if (Sdxi2 > 0)                                       // calculate funktion paramters of f(x) = ax + b
+    if (Sdxi2 > 0)                                       // calculate function paramters of f(x) = ax + b
       {
         a = Sdxidyi/Sdxi2;
         b = ym - a * xm;
@@ -273,9 +259,7 @@ void MotorControl()
 {
   if (emergencyStop || forwardStopCommand) {        // Emergency stop or manually stop
     analogWrite(motor1PWM, stopDutyCycle);          // *******************************
-    analogWrite(motor2PWM, stopDutyCycle);
     analogWrite(motor3PWM, stopDutyCycle);
-    analogWrite(motor4PWM, stopDutyCycle);
     forwardSlowCommand = false;
     forwardHalfCommand = false;
     forwardFullCommand = false;
@@ -295,101 +279,81 @@ void MotorControl()
   
   if (forwardSlowCommand) {                     // Forward slow
     digitalWrite(motor1Direction, forward);     // ************
-    digitalWrite(motor2Direction, forward);
-    digitalWrite(motor3Direction, forward);
-    digitalWrite(motor4Direction, forward);
     steeringDutyCycle12 = slowDutyCycle12 + (slowDutyCycle12 * steeringRate / 100);
     steeringDutyCycle34 = slowDutyCycle34 + (slowDutyCycle34 * steeringRate / 100);
     if (steeringLeftCommand) {
-      analogWrite(motor1PWM, steeringDutyCycle12);// Steering Left
-      analogWrite(motor2PWM, steeringDutyCycle12);
-      analogWrite(motor3PWM, slowDutyCycle34);
-      analogWrite(motor4PWM, slowDutyCycle34);
+      analogWrite(motor3PWM, steeringDutyCycle34);// Steering Left
+      analogWrite(motor1PWM, slowDutyCycle12);
+      steeringservo.write(ServoLeft);
     }
     else {
       if (steeringRightCommand) {
-        analogWrite(motor1PWM, slowDutyCycle12);  // Steering Right
-        analogWrite(motor2PWM, slowDutyCycle12);
-        analogWrite(motor3PWM, steeringDutyCycle34);
-        analogWrite(motor4PWM, steeringDutyCycle34);
+        analogWrite(motor3PWM, slowDutyCycle34);  // Steering Right
+        analogWrite(motor1PWM, steeringDutyCycle12);
+        steeringservo.write(ServoRight);
       }
       else {
         analogWrite(motor1PWM, slowDutyCycle12);  // Steering ahead
-        analogWrite(motor2PWM, slowDutyCycle12);
         analogWrite(motor3PWM, slowDutyCycle34);
-        analogWrite(motor4PWM, slowDutyCycle34);
+        steeringservo.write(ServoMiddle);
       }
     }
   }
 
   if (forwardHalfCommand) {                     // Forward half
     digitalWrite(motor1Direction, forward);     // ************
-    digitalWrite(motor2Direction, forward);
     digitalWrite(motor3Direction, forward);
-    digitalWrite(motor4Direction, forward);
     steeringDutyCycle12 = halfDutyCycle12 + (halfDutyCycle12 * steeringRate / 100);
     steeringDutyCycle34 = halfDutyCycle34 + (halfDutyCycle34 * steeringRate / 100);
     if (steeringLeftCommand) {
-      analogWrite(motor1PWM, steeringDutyCycle12);// Steering Left
-      analogWrite(motor2PWM, steeringDutyCycle12);
-      analogWrite(motor3PWM, halfDutyCycle34);
-      analogWrite(motor4PWM, halfDutyCycle34);
+      analogWrite(motor3PWM, steeringDutyCycle34);// Steering Left
+      analogWrite(motor1PWM, halfDutyCycle12);
+      steeringservo.write(ServoLeft);
     }
     else {
       if (steeringRightCommand) {
-        analogWrite(motor1PWM, halfDutyCycle12);  // Steering Right
-        analogWrite(motor2PWM, halfDutyCycle12);
-        analogWrite(motor3PWM, steeringDutyCycle34);
-        analogWrite(motor4PWM, steeringDutyCycle34);
+        analogWrite(motor3PWM, halfDutyCycle34);  // Steering Right
+        analogWrite(motor1PWM, steeringDutyCycle12);
+        steeringservo.write(ServoRight);
       }
       else {
-        analogWrite(motor1PWM, halfDutyCycle12);  // Steering ahead
-        analogWrite(motor2PWM, halfDutyCycle12);
-        analogWrite(motor3PWM, halfDutyCycle34);
-        analogWrite(motor4PWM, halfDutyCycle34);
+        analogWrite(motor3PWM, halfDutyCycle34);  // Steering ahead
+        analogWrite(motor1PWM, halfDutyCycle12);
+        steeringservo.write(ServoMiddle);
       }
     }
   }
 
   if (forwardFullCommand) {                     // Forward full
     digitalWrite(motor1Direction, forward);     // ************
-    digitalWrite(motor2Direction, forward);
     digitalWrite(motor3Direction, forward);
-    digitalWrite(motor4Direction, forward);
     steeringDutyCycle12 = fullDutyCycle12 + (fullDutyCycle12 * steeringRate / 100);
     steeringDutyCycle34 = fullDutyCycle34 + (fullDutyCycle34 * steeringRate / 100);
     if (steeringLeftCommand) {
-      analogWrite(motor1PWM, steeringDutyCycle12);// Steering Left
-      analogWrite(motor2PWM, steeringDutyCycle12);
-      analogWrite(motor3PWM, fullDutyCycle34);
-      analogWrite(motor4PWM, fullDutyCycle34);
+      analogWrite(motor3PWM, steeringDutyCycle34);// Steering Left
+      analogWrite(motor1PWM, fullDutyCycle12);
+      steeringservo.write(ServoLeft);
     }
     else {
       if (steeringRightCommand) {
-        analogWrite(motor1PWM, fullDutyCycle12);  // Steering Right
-        analogWrite(motor2PWM, fullDutyCycle12);
-        analogWrite(motor3PWM, steeringDutyCycle34);
-        analogWrite(motor4PWM, steeringDutyCycle34);
+        analogWrite(motor3PWM, fullDutyCycle34);  // Steering Right
+        analogWrite(motor1PWM, steeringDutyCycle12);
+        steeringservo.write(ServoRight);
       }
       else {
         analogWrite(motor1PWM, fullDutyCycle12);  // Steering ahead
-        analogWrite(motor2PWM, fullDutyCycle12);
         analogWrite(motor3PWM, fullDutyCycle34);
-        analogWrite(motor4PWM, fullDutyCycle34);
+        steeringservo.write(ServoMiddle);
       }
     }
   }
 
   if (turnSlowLeftToCommand) {                    // Turn left to (see project documentation)
                                                   // ************  
-    digitalWrite(motor1Direction, backward);
-    digitalWrite(motor2Direction, backward);
-    digitalWrite(motor3Direction, forward);
-    digitalWrite(motor4Direction, forward);
+    digitalWrite(motor3Direction, backward);
+    digitalWrite(motor1Direction, forward);
     analogWrite(motor1PWM, slowDutyCycle12T);
-    analogWrite(motor2PWM, slowDutyCycle12T);
     analogWrite(motor3PWM, slowDutyCycle34T);
-    analogWrite(motor4PWM, slowDutyCycle34T);
     
     if (((startAngle - angle16) < 0) && ((startAngle - angle16) > -10)) turnedAngle = 0; // Filter measuring faults (-9..-1)
     else turnedAngle = (3600 + startAngle - angle16) % 3600;                             // calculate turned angle
@@ -412,9 +376,7 @@ void MotorControl()
           )
         ){                                                                                           // Target reached  
           analogWrite(motor1PWM, stopDutyCycle);
-          analogWrite(motor2PWM, stopDutyCycle);
           analogWrite(motor3PWM, stopDutyCycle);
-          analogWrite(motor4PWM, stopDutyCycle);
           turnSlowLeftToCommand = false;
           turnSlow45LeftCommand = false;
           turnSlow90LeftCommand = false;
@@ -427,14 +389,10 @@ void MotorControl()
 
   if (turnSlowRightToCommand) {                   // Turn right to (see project documentation)
                                                   // *************   
-    digitalWrite(motor1Direction, forward);
-    digitalWrite(motor2Direction, forward);
-    digitalWrite(motor3Direction, backward);
-    digitalWrite(motor4Direction, backward);
+    digitalWrite(motor3Direction, forward);
+    digitalWrite(motor1Direction, backward);
     analogWrite(motor1PWM, slowDutyCycle12T);
-    analogWrite(motor2PWM, slowDutyCycle12T);
     analogWrite(motor3PWM, slowDutyCycle34T);
-    analogWrite(motor4PWM, slowDutyCycle34T);
     
     if (((angle16 - startAngle) < 0) && ((angle16 - startAngle) > -10)) turnedAngle = 0; // Filter measuring faults (-9..-1)
     else turnedAngle = (3600 + angle16 - startAngle) % 3600;                             // calculate turned angle
@@ -458,9 +416,7 @@ void MotorControl()
           )
       ){                                                                                          // Target reached    
         analogWrite(motor1PWM, stopDutyCycle);
-        analogWrite(motor2PWM, stopDutyCycle);
         analogWrite(motor3PWM, stopDutyCycle);
-        analogWrite(motor4PWM, stopDutyCycle);
         turnSlowRightToCommand = false;
         turnSlow45RightCommand = false;
         turnSlow90RightCommand = false;
@@ -520,7 +476,19 @@ void QuadratureEncoderInit(void)
 {
   int16_t val;
   cli();
+  //set timer2 interrupt at 2kHz
+  TCCR2A = 0;// set entire TCCR2A register to 0
+  TCCR2B = 0;// same for TCCR2B
+  TCNT2  = 0;//initialize counter value to 0
+  // set compare match register for 2khz increments
+  OCR2A = 124;// = (16*10^6) / (2000*64) - 1 (must be <256)
+  // turn on CTC mode
+  TCCR2A |= (1 << WGM21);
+  // Set CS21 and CS20 bits for 64 prescaler
+  TCCR2B |= (1 << CS21) | (1 << CS20);   
+  // enable timer compare interrupt
   TIMSK2 |= (1 << OCIE2A);
+  
   val = 0;
   if (LT_PHASE_A)
     val = 3;
@@ -665,15 +633,18 @@ void setup()
   pinMode(distanceFrontTrig, OUTPUT);
   pinMode(distanceUpTrig, OUTPUT);
   pinMode(motor1Direction, OUTPUT);
-  pinMode(motor2Direction, OUTPUT);
-  pinMode(motor3Direction, OUTPUT);
-  pinMode(motor4Direction, OUTPUT);
   pinMode(motor1PWM, OUTPUT);
-  pinMode(motor2PWM, OUTPUT);
+  pinMode(motor3Direction, OUTPUT);
   pinMode(motor3PWM, OUTPUT);
-  pinMode(motor4PWM, OUTPUT);
+  pinMode(ServoPWM, OUTPUT);
   pinMode(CMPS11_VCC, OUTPUT);
   pinMode(amplifier_VCC, OUTPUT);
+
+  // Servo
+  // ************************************************************************************************************
+
+  steeringservo.attach(ServoPWM);
+  steeringservo.write(ServoMiddle);            // middle position
 
   // CMPS11 startup
   // ************************************************************************************************************
@@ -696,10 +667,8 @@ void setup()
   }
   Serial.print ("MV@Version: V ");
   Serial.println(ARDUINO); 
-  Serial.print("MV@Battery 9V: LL ");
-  Serial.println(battery9VLowerLimit);
-  Serial.print("MV@Battery 7V: LL ");
-  Serial.println(battery7VLowerLimit);  
+  Serial.print("MV@Battery 12V: LL ");
+  Serial.println(battery12VLowerLimit);
   Serial.print("MV@Battery 5V: LL ");
   Serial.println(battery5VLowerLimit);    
   Serial.print("MV@Arduino 5V: LL ");
@@ -742,17 +711,12 @@ void loop()
   if (turnFinished == true) {
     // Read battery probe and check limit if no turn is running (shorten cycle time)
     // *********************************************************************************************************************************
-    battery9VRawValue = analogRead(battery9VProbe);
-    battery7VRawValue = analogRead(battery7VProbe);
+    battery12VRawValue = analogRead(battery12VProbe);
     battery5VRawValue = analogRead(battery5VProbe);
     Arduino5VRawValue = analogRead(Arduino5VProbe);
   
-    battery9VFinalValue = battery9VRawValue * 10.0 / 1023.0;
-    battery9VLow = (battery9VFinalValue < battery9VLowerLimit);
-  
-    battery7VFinalValue = battery7VRawValue * 10.0 / 1023.0;
-    battery7VLow = (battery7VFinalValue < battery7VLowerLimit);
-  
+    battery12VFinalValue = battery12VRawValue * 15.3 / 1023.0;
+    battery12VLow = (battery12VFinalValue < battery12VLowerLimit);
   
     battery5VFinalValue = battery5VRawValue * 5.0 / 1023.0;
     battery5VLow = (battery5VFinalValue < battery5VLowerLimit);
@@ -764,21 +728,13 @@ void loop()
   // Read motor current probe and check limit
   // ************************************************************************************************************************************
   motor1RawValue = analogRead(motor1CurrentProbe);
-  motor2RawValue = analogRead(motor2CurrentProbe);
   motor3RawValue = analogRead(motor3CurrentProbe);
-  motor4RawValue = analogRead(motor4CurrentProbe);
 
   motor1FinalValue = motor1RawValue * 5.0 / 1023.0;
   motor1Stall = (motor1FinalValue > motorStallLimit);
 
-  motor2FinalValue = motor2RawValue * 5.0 / 1023.0;
-  motor2Stall = (motor2FinalValue > motorStallLimit);
-
   motor3FinalValue = motor3RawValue * 5.0 / 1023.0;
   motor3Stall = (motor3FinalValue > motorStallLimit);
-
-  motor4FinalValue = motor4RawValue * 5.0 / 1023.0;
-  motor4Stall = (motor4FinalValue > motorStallLimit);
 
   // Read CMPS11 values
   // ***********************************************************************************************************************************
@@ -805,8 +761,6 @@ void loop()
   angle16 = high_byte;                       // Calculate 16 bit angle
   angle16 <<= 8;
   angle16 += low_byte;
-  angle16 += 1800;                           // correction of 180 degrees mounting difference to heading
-  angle16 = angle16 % 3600;
   if ((angle16 >= 3595) || (angle16 <= 5)) angle16 = 0;               // Hysteresis +- 0.5 degree arount 0 degrees
 //****************************************************************************************************************
 
@@ -837,62 +791,62 @@ void loop()
 
     // Read distances to obstructions (US-015 contains a temperature compensation)
     // *************************************************************************************************************************************
-    digitalWrite(distancefLeftTrig, LOW);                               // front Left
-    delayMicroseconds(5);                                               // **********
-    digitalWrite(distancefLeftTrig, HIGH);
+//    digitalWrite(distancefLeftTrig, LOW);                               // front Left
+//    delayMicroseconds(5);                                               // **********
+//    digitalWrite(distancefLeftTrig, HIGH);
+//    delayMicroseconds(10);
+//    digitalWrite(distancefLeftTrig, LOW);
+//    distancefLeftPulseTime = pulseIn(distancefLeftEcho, HIGH, 23600);   // Range limited to 2 x 200cm (timeout delivers 0)
+//    if (distancefLeftPulseTime > 60) {                                  // filter 0 of timeout 
+//      distancefLeftCm = distancefLeftPulseTime / 59;                    // 29.4us / cm (two ways) 
+//    }
+//    else { 
+//      distancefLeftCm = 210;                                            // out of range
+//    }
+//    distancefLeftObstruction = (distancefLeftCm < distancefLeftLimit);  // Obstruction detected front left
+//  
+//    digitalWrite(distancefRightTrig, LOW);                              // front Right
+//    delayMicroseconds(5);                                               // ***********
+//    digitalWrite(distancefRightTrig, HIGH);
+//    delayMicroseconds(10);
+//    digitalWrite(distancefRightTrig, LOW);
+//    distancefRightPulseTime = pulseIn(distancefRightEcho, HIGH, 23600);  // Range limited to 200cm
+//    if (distancefRightPulseTime > 60) {                                  // disturbance filter
+//      distancefRightCm = distancefRightPulseTime / 59;
+//    }
+//    else {
+//      distancefRightCm = 210;                                            // out of range
+//    }
+//    distancefRightObstruction = (distancefRightCm < distancefRightLimit);// Obstruction detected front right
+    
+    
+    digitalWrite(distancebLeftTrig, LOW);                               // back Left
+    delayMicroseconds(5);                                               // *********
+    digitalWrite(distancebLeftTrig, HIGH);
     delayMicroseconds(10);
-    digitalWrite(distancefLeftTrig, LOW);
-    distancefLeftPulseTime = pulseIn(distancefLeftEcho, HIGH, 23600);   // Range limited to 2 x 200cm (timeout delivers 0)
-    if (distancefLeftPulseTime > 60) {                                  // filter 0 of timeout 
-      distancefLeftCm = distancefLeftPulseTime / 59;                    // 29.4us / cm (two ways) 
-    }
-    else { 
-      distancefLeftCm = 210;                                            // out of range
-    }
-    distancefLeftObstruction = (distancefLeftCm < distancefLeftLimit);  // Obstruction detected front left
-  
-    digitalWrite(distancefRightTrig, LOW);                              // front Right
-    delayMicroseconds(5);                                               // ***********
-    digitalWrite(distancefRightTrig, HIGH);
-    delayMicroseconds(10);
-    digitalWrite(distancefRightTrig, LOW);
-    distancefRightPulseTime = pulseIn(distancefRightEcho, HIGH, 23600);  // Range limited to 200cm
-    if (distancefRightPulseTime > 60) {                                  // disturbance filter
-      distancefRightCm = distancefRightPulseTime / 59;
+    digitalWrite(distancebLeftTrig, LOW);
+    distancebLeftPulseTime = pulseIn(distancebLeftEcho, HIGH, 23600);
+    if (distancebLeftPulseTime > 60) {                                  // disturbance filter
+      distancebLeftCm = distancebLeftPulseTime / 59;
     }
     else {
-      distancefRightCm = 210;                                            // out of range
+      distancebLeftCm = 210;                                            // out of range
     }
-    distancefRightObstruction = (distancefRightCm < distancefRightLimit);// Obstruction detected front right
+    distancebLeftObstruction = (distancebLeftCm < distancebLeftLimit);// Obstruction detected back left
     
-    
-  //  digitalWrite(distancebLeftTrig, LOW);                               // back Left
-  //  delayMicroseconds(5);                                               // *********
-  //  digitalWrite(distancebLeftTrig, HIGH);
-  //  delayMicroseconds(10);
-  //  digitalWrite(distancebLeftTrig, LOW);
-  //  distancebLeftPulseTime = pulseIn(distancebLeftEcho, HIGH, 23600);
-  //  if (distancebLeftPulseTime > 60) {                                  // disturbance filter
-  //    distancebLeftCm = distancebLeftPulseTime / 59;
-  //  }
-  //  else {
-  //    distancebLeftCm = 210;                                            // out of range
-  //  }
-  //  distancebLeftObstruction = (distancebLeftCm < distancebLeftLimit);// Obstruction detected back left
-  //  
-  //  digitalWrite(distancebRightTrig, LOW);                              // back Right
-  //  delayMicroseconds(5);                                               // **********
-  //  digitalWrite(distancebRightTrig, HIGH);
-  //  delayMicroseconds(10);
-  //  digitalWrite(distancebRightTrig, LOW);
-  //  distancebRightPulseTime = pulseIn(distancebRightEcho, HIGH, 23600);
-  //  if (distancebRightPulseTime > 60) {                                 // disturbance filter
-  //    distancebRightCm = distancebRightPulseTime / 59;
-  //  }
-  //  else {
-  //    distancebRightCm = 210;                                           // out of range
-  //  }
-  //  distancebRightObstruction = (distancebRightCm < distancebRightLimit);// Obstruction detected back right
+    digitalWrite(distancebRightTrig, LOW);                              // back Right
+    delayMicroseconds(5);                                               // **********
+    digitalWrite(distancebRightTrig, HIGH);
+    delayMicroseconds(10);
+    digitalWrite(distancebRightTrig, LOW);
+    distancebRightPulseTime = pulseIn(distancebRightEcho, HIGH, 23600);
+    if (distancebRightPulseTime > 60) {                                 // disturbance filter
+      distancebRightCm = distancebRightPulseTime / 59;
+    }
+    else {
+      distancebRightCm = 210;                                           // out of range
+    }
+    distancebRightObstruction = (distancebRightCm < distancebRightLimit);// Obstruction detected back right
     
     // Alignment
     // *********
@@ -1023,14 +977,15 @@ void loop()
   // *************************************************************************************************************************************
 
   if (emergencyStop == false) {                                       // keep emergency stop stored until manually reset
-    emergencyStop =  battery9VLow || battery7VLow || battery5VLow  || Arduino5VLow
+    emergencyStop =  battery12VLow || battery5VLow  || Arduino5VLow
 //                     || distancefRightObstruction  || distancefLeftObstruction  
-                     || distanceFrontObstruction  
-                     || motor1Stall  || motor2Stall  || motor3Stall  || motor4Stall  
+//                     || distanceFrontObstruction  
+                     || motor1Stall  || motor3Stall  
                      || UpitchLimitExceeded  || LpitchLimitExceeded || UrollLimitExceeded  || LrollLimitExceeded
-                     || usbDisturbance;
+
 //                     || distanceDownObstruction 
-//                     || wlanDisturbance;
+//                     || wlanDisturbance
+                     || usbDisturbance;
   }
 
 
@@ -1074,15 +1029,10 @@ void loop()
       Serial.print("MV@EncRt: V ");
       Serial.println(encRt, DEC);
     
-      Serial.print("MV@Battery 9V: V ");
-      Serial.println(battery9VFinalValue);
-      Serial.print("MV@Battery 9V: LL_Exceeded ");
-      Serial.println(battery9VLow);
-    
-      Serial.print("MV@Battery 7V: V ");
-      Serial.println(battery7VFinalValue);
-      Serial.print("MV@Battery 7V: LL_Exceeded ");
-      Serial.println(battery7VLow);
+      Serial.print("MV@Battery 12V: V ");
+      Serial.println(battery12VFinalValue);
+      Serial.print("MV@Battery 12V: LL_Exceeded ");
+      Serial.println(battery12VLow);
     
       Serial.print("MV@Battery 5V: V ");
       Serial.println(battery5VFinalValue);
@@ -1094,16 +1044,6 @@ void loop()
       Serial.print("MV@Arduino 5V: LL_Exceeded ");
       Serial.println(Arduino5VLow);
 
-      Serial.print("MV@Distance fleft: V ");
-      Serial.println(distancefLeftCm);
-      Serial.print("MV@Distance fleft: LL_Exceeded ");
-      Serial.println(distancefLeftObstruction);
-    
-      Serial.print("MV@Distance fright: V ");
-      Serial.println(distancefRightCm);
-      Serial.print("MV@Distance fright: LL_Exceeded ");
-      Serial.println(distancefRightObstruction);
-  
       Serial.print("MV@Distance bleft: V ");
       Serial.println(distancebLeftCm);
       Serial.print("MV@Distance bleft: LL_Exceeded ");
@@ -1122,10 +1062,10 @@ void loop()
       Serial.print("MV@Distance up: V ");
       Serial.println(distanceUpCm);
       
-      Serial.print("MV@Distance down: V ");
-      Serial.println(distanceDownCm);
-      Serial.print("MV@Distance down: UL_Exceeded ");
-      Serial.println(distanceDownObstruction);
+//      Serial.print("MV@Distance down: V ");
+//      Serial.println(distanceDownCm);
+//      Serial.print("MV@Distance down: UL_Exceeded ");
+//      Serial.println(distanceDownObstruction);
 
       Serial.print("S@Forward slow: ");
       Serial.println(forwardSlowCommand);
@@ -1150,11 +1090,7 @@ void loop()
 
       Serial.print("MV@Motor1 current: UL ");
       Serial.println(motorStallLimit);
-      Serial.print("MV@Motor2 current: UL ");
-      Serial.println(motorStallLimit);
       Serial.print("MV@Motor3 current: UL ");
-      Serial.println(motorStallLimit);
-      Serial.print("MV@Motor4 current: UL ");
       Serial.println(motorStallLimit);
       
       Serial.print("MV@Motor1 current: V ");
@@ -1162,20 +1098,10 @@ void loop()
       Serial.print("MV@Motor1 current: UL_Exceeded ");
       Serial.println(motor1Stall);
     
-      Serial.print("MV@Motor2 current: V ");
-      Serial.println(motor2FinalValue);
-      Serial.print("MV@Motor2 current: UL_Exceeded ");
-      Serial.println(motor2Stall);
-    
       Serial.print("MV@Motor3 current: V ");
       Serial.println(motor3FinalValue);
       Serial.print("MV@Motor3 current: UL_Exceeded ");
       Serial.println(motor3Stall);
-    
-      Serial.print("MV@Motor4 current: V ");
-      Serial.println(motor4FinalValue);
-      Serial.print("MV@Motor4 current: UL_Exceeded ");
-      Serial.println(motor4Stall);
   
       Serial.print("MV@Roll: V ");
       Serial.println(roll, DEC);
@@ -1288,8 +1214,8 @@ void loop()
       }
       if (CommandString.startsWith("Turn slow 45 left")) {
         startAngle = angle16;                     // store start angle
-        turnAngleRelative = 420;
-        turnAngle = (3600 + angle16 - 420) % 3600;
+        turnAngleRelative = 440;
+        turnAngle = (3600 + angle16 - 440) % 3600;
         
         turnSlow45LeftCommand = true;
         turnSlowLeftToCommand = true;
@@ -1301,8 +1227,8 @@ void loop()
   
       if (CommandString.startsWith("Turn slow 45 right")) {
         startAngle = angle16;                     // store start angle
-        turnAngleRelative = 420;
-        turnAngle = (angle16 + 420) % 3600;
+        turnAngleRelative = 440;
+        turnAngle = (angle16 + 440) % 3600;
         
         turnSlow45RightCommand = true;
         turnSlowRightToCommand = true;  
@@ -1313,8 +1239,8 @@ void loop()
       }
       if (CommandString.startsWith("Turn slow 90 left")) {
         startAngle = angle16;                     // store start angle
-        turnAngleRelative = 870;
-        turnAngle = (3600 + angle16 - 870) % 3600;
+        turnAngleRelative = 890;
+        turnAngle = (3600 + angle16 - 890) % 3600;
         
         turnSlow90LeftCommand = true;
         turnSlowLeftToCommand = true;
@@ -1325,8 +1251,8 @@ void loop()
       }
       if (CommandString.startsWith("Turn slow 90 right")) {
         startAngle = angle16;                     // store start angle
-        turnAngleRelative = 870;
-        turnAngle = (angle16 + 870) % 3600;
+        turnAngleRelative = 890;
+        turnAngle = (angle16 + 890) % 3600;
                
         turnSlow90RightCommand = true;
         turnSlowRightToCommand = true;  
@@ -1352,14 +1278,14 @@ void loop()
         if (i > 1800) turnAngleRelative = i - 3600;
         
         if (turnAngleRelative >= 0) {                                                 // turn right to
-          turnAngle = (3600 + turnAngle - 40) % 3600;                                 // cycle tolerance
-          turnAngleRelative = (3600 + turnAngleRelative - 40) % 3600;
+          turnAngle = (3600 + turnAngle - 10) % 3600;                                 // cycle tolerance
+          turnAngleRelative = (3600 + turnAngleRelative - 10) % 3600;
           turnSlowRightToCommand = true;                                              
         }
         else {                                                                        // turn left to
           turnAngleRelative = abs(turnAngleRelative);                                 
-          turnAngle = (3600 + turnAngle + 40) % 3600;                                 // cycle tolerance
-          turnAngleRelative = (3600 + turnAngleRelative - 40) % 3600;
+          turnAngle = (3600 + turnAngle + 10) % 3600;                                 // cycle tolerance
+          turnAngleRelative = (3600 + turnAngleRelative - 10) % 3600;
           turnSlowLeftToCommand = true;                                               
         }       
       }
