@@ -769,33 +769,38 @@ void MotorControl()
       
       sequenceCounter180 = 2;                        // next step
     }
-    
-    if (turnSlow90LeftForwardFirstCommand == false) {// 2----------------------------------------------------------
-      
-      sequenceCounter90 = 1;
-      turnSlow90LeftBackwardFirstCommand = true;     // Turn 90 degrees left backward first
-      sequenceCounter180 = 3;                        // next step
-      
-    }        
-        
-    if (turnSlow90LeftBackwardFirstCommand == false) {// 3----------------------------------------------------------
- 
-      turnSlow180LeftCommand = false;
-      sequenceCounter180 = 0;                  
-     }
-      
+
+
+
+    if (sequenceCounter180 == 2) {                   // 2----------------------------------------------------------   
+        if (turnSlow90LeftForwardFirstCommand == false) {          
+          sequenceCounter90 = 1;
+          turnSlow90LeftBackwardFirstCommand = true; // Turn 90 degrees left backward first
+          
+          sequenceCounter180 = 3;                    // next step
+          
+        }        
+    }
+    if (sequenceCounter180 == 3) {                   // 3----------------------------------------------------------    
+        if (turnSlow90LeftBackwardFirstCommand == false) {  
+          turnSlow180LeftCommand = false;
+          
+          sequenceCounter180 = 0;                  
+         }
+    }      
   }
 
   if (turnSlowToCommand) {                         // Turn to absolute angle sequence (see project documentation)
                                                    // ***********************************************************
-    if (sequenceCounterTo = 1) {                   // 1
+                                                   // construction area!
+    if (sequenceCounterTo = 1) {                   // 1----------------------------------------------------------
       
         startAngle = angle16;                                                         // store start angle
         i = (turnAngle - angle16);
         turnAngleRelative = i;                                                        // store relative angle
 
                                                                                       // decision turn left or right or do nothing
-        if (i < -1 || i >1) {                                                         // do nothing in range -1 +1 degrees                                                                                          
+        if (i < -1 || i > 1) {                                                         // do nothing in range (-1 .. +1) degrees                                                                                          
           if (i < -1800) turnAngleRelative = i + 3600;                                  
           if (i > 1800) turnAngleRelative = i - 3600;
   
