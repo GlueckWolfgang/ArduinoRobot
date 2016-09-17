@@ -1,13 +1,13 @@
 
 //****************************************************************************************************************************************************
 // *** Arduino robot program V3
-// *** Version: 2016.08.23
+// *** Version: 2016.09.17
 // *** Developer: Wolfgang Glück
 // ***
 // *** Supported hardware:
 // ***   - 2 motors 12V with gear and encoder                       (EMG30, Manu systems AG)
 // ***   - Motor control board (MCB)
-// ***   - Steering gear with servo                                 (HPI Buggy flux 1/10 axle stubs 0 degrees, SC 1251 MG)
+// ***   - Steering gear with servo                                 (HPI Buggy flux 1/10 axle stubs, Servo SC 1251 MG)
 // ***   - Arduino mega                                             (Spider)
 // ***   - Compass                                                  (CMPS11 via 10cm I2C bus, using internal pullups by default)
 // ***                                                              (For calibration use separated program CPMS11Calibration)
@@ -21,6 +21,7 @@
 // ***   - SD card 32GB
 // ***   - camera
 // ***   - W-LAN adapter                                            (EW-7612UAN V2)
+// ***   - Audio Stick
 // ***   - USB cable from Raspberry pi to Arduino
 // ***
 // *** Functions:
@@ -29,13 +30,13 @@
 // ***   - (ok) Read compass values via I2C
 // ***   - (ok) Smoothe compass value for a calm display
 // ***   - (ok) Supervise roll and pitch
-// ***   - (ok) Read encoders
+// ***   - (ok) Read encoder
 // ***   - (ok) Read distances
 // ***   - (ok) Send analog and digital values to USB interface
 // ***   - (ok) Get and execute driving commands via USB interface (transition beween driving commands directly is allowed)
 // ***          (Stop, ForwardSlow, ForwardHalf, ForwardFull)
 // ***          (SteeringAhead, SteeringLeft, SteeringRight in combination with Forward Commands)
-// ***          (TurnSlow45Left, TurnSlow45Right, TurnSlow90Left, TurnSlow90Right, turnSlowTo value)
+// ***          (TurnSlow90Left, TurnSlow90Right, TurnSlow180Left, turnSlowTo value)
 // ***   - (ok) Get switch on/off command for audio amplifier
 // ***   - (ok) Get reset command for encoder values
 // ***   - (ok) Get status about W-LAN from USB interface
@@ -61,7 +62,8 @@ Servo steeringservo;
 #define ServoExtreme 35
 #define ServoLeft ServoMiddle-ServoExtreme
 #define ServoRight ServoMiddle+ServoExtreme
-
+#define ServoPmin 500
+#define ServoPmax 1350
 
 // Compass
 // *************************************************************************************************************************
@@ -162,6 +164,7 @@ int sequenceCounterTo = 0;              // Sequence counter for turn to
 int alpha = 0;                          // small angle step to turn
 int betas = 0;                          // wide angle step to turn
 int i = 0;
+int targetAngle = 0;                    // turn to target angle
 float turningRadius = 46.0;             // Turning radius
 float beta, bs = 0.0;                   // beta, b'
 boolean forwardStopCommand  = true;     // Stop command
@@ -287,6 +290,8 @@ void MotorControl()
     alignCommand = false;
     turnFinished = true;
     startAngle = 0;
+    Serial.print("S@Turn finished: ");          // remote status for turn finished to true
+    Serial.println(turnFinished);
   }
 
   if (forwardSlowCommand) {                     // Forward slow manually
@@ -295,22 +300,28 @@ void MotorControl()
     steeringDutyCycle12 = slowDutyCycle12 + (slowDutyCycle12 * steeringRate / 100);
     steeringDutyCycle34 = slowDutyCycle34 + (slowDutyCycle34 * steeringRate / 100);
     if (steeringLeftCommand) {
-      analogWrite(motor3PWM, slowDutyCycle34);// Steering Left
+      analogWrite(motor3PWM, slowDutyCycle34);  // Steering Left
       analogWrite(motor1PWM, steeringDutyCycle12);
-      steeringservo.attach(ServoPWM);
+      if (not steeringservo.attached()){
+        steeringservo.attach(ServoPWM, ServoPmin, ServoPmax);      
+      }
       steeringservo.write(ServoLeft);
     }
     else {
       if (steeringRightCommand) {
-        analogWrite(motor3PWM, steeringDutyCycle34);  // Steering Right
+        analogWrite(motor3PWM, steeringDutyCycle34); // Steering Right
         analogWrite(motor1PWM, slowDutyCycle12);
-        steeringservo.attach(ServoPWM);
+        if (not steeringservo.attached()){
+          steeringservo.attach(ServoPWM, ServoPmin, ServoPmax);         
+        }
         steeringservo.write(ServoRight);
       }
       else {
-        analogWrite(motor1PWM, slowDutyCycle12);  // Steering ahead
+        analogWrite(motor1PWM, slowDutyCycle12); // Steering ahead
         analogWrite(motor3PWM, slowDutyCycle34);
-        steeringservo.attach(ServoPWM);
+        if (not steeringservo.attached()){
+          steeringservo.attach(ServoPWM, ServoPmin, ServoPmax);
+        }
         steeringservo.write(ServoMiddle);
       }
     }
@@ -322,22 +333,28 @@ void MotorControl()
     steeringDutyCycle12 = slowDutyCycle12 + (slowDutyCycle12 * steeringRate / 100);
     steeringDutyCycle34 = slowDutyCycle34 + (slowDutyCycle34 * steeringRate / 100);
     if (steeringLeftCommand) {
-      analogWrite(motor3PWM, slowDutyCycle34);// Steering Left
+      analogWrite(motor3PWM, slowDutyCycle34);   // Steering Left
       analogWrite(motor1PWM, steeringDutyCycle12);
-      steeringservo.attach(ServoPWM);
+      if (not steeringservo.attached()){
+        steeringservo.attach(ServoPWM, ServoPmin, ServoPmax);         
+      }
       steeringservo.write(ServoLeft);
     }
     else {
       if (steeringRightCommand) {
         analogWrite(motor3PWM, steeringDutyCycle34);  // Steering Right
         analogWrite(motor1PWM, slowDutyCycle12);
-        steeringservo.attach(ServoPWM);
+        if (not steeringservo.attached()){
+          steeringservo.attach(ServoPWM, ServoPmin, ServoPmax);         
+        }
         steeringservo.write(ServoRight);
       }
       else {
         analogWrite(motor1PWM, slowDutyCycle12);      // Steering ahead
         analogWrite(motor3PWM, slowDutyCycle34);
-        steeringservo.attach(ServoPWM);
+        if (not steeringservo.attached()){
+          steeringservo.attach(ServoPWM, ServoPmin, ServoPmax);         
+        }
         steeringservo.write(ServoMiddle);
       }
     }
@@ -351,20 +368,26 @@ void MotorControl()
     if (steeringLeftCommand) {
       analogWrite(motor3PWM, halfDutyCycle34);// Steering Left
       analogWrite(motor1PWM, steeringDutyCycle12);
-      steeringservo.attach(ServoPWM);
+      if (not steeringservo.attached()){
+        steeringservo.attach(ServoPWM, ServoPmin, ServoPmax);         
+      }
       steeringservo.write(ServoLeft);
     }
     else {
       if (steeringRightCommand) {
         analogWrite(motor3PWM, steeringDutyCycle34);  // Steering Right
         analogWrite(motor1PWM, halfDutyCycle12);
-        steeringservo.attach(ServoPWM);
+        if (not steeringservo.attached()){
+          steeringservo.attach(ServoPWM, ServoPmin, ServoPmax);         
+        }
         steeringservo.write(ServoRight);
       }
       else {
         analogWrite(motor3PWM, halfDutyCycle34);  // Steering ahead
         analogWrite(motor1PWM, halfDutyCycle12);
-        steeringservo.attach(ServoPWM);
+        if (not steeringservo.attached()){
+          steeringservo.attach(ServoPWM, ServoPmin, ServoPmax);         
+        }
         steeringservo.write(ServoMiddle);
       }
     }
@@ -378,30 +401,36 @@ void MotorControl()
     if (steeringLeftCommand) {
       analogWrite(motor3PWM, fullDutyCycle34);// Steering Left
       analogWrite(motor1PWM, steeringDutyCycle12);
-      steeringservo.attach(ServoPWM);
+      if (not steeringservo.attached()){
+        steeringservo.attach(ServoPWM, ServoPmin, ServoPmax);         
+      }
       steeringservo.write(ServoLeft);
     }
     else {
       if (steeringRightCommand) {
         analogWrite(motor3PWM, steeringDutyCycle34);  // Steering Right
         analogWrite(motor1PWM, fullDutyCycle12);
-        steeringservo.attach(ServoPWM);
+        if (not steeringservo.attached()){
+          steeringservo.attach(ServoPWM, ServoPmin, ServoPmax);         
+        }
         steeringservo.write(ServoRight);
       }
       else {
         analogWrite(motor1PWM, fullDutyCycle12);      // Steering ahead
         analogWrite(motor3PWM, fullDutyCycle34);
-        steeringservo.attach(ServoPWM);
+        if (not steeringservo.attached()){
+          steeringservo.attach(ServoPWM, ServoPmin, ServoPmax);         
+        }
         steeringservo.write(ServoMiddle);
       }
     }
   }
 
-  if (turnSlowLeftToCommand) {                    // Turn left to (see project documentation)
+  if (turnSlowLeftToCommand) {                    // Supervision of turn left to (see project documentation)
                                                   // ****************************************
-                                                  // Input:  int angle16, startAngle, turnAngle
-                                                  // Output: int turnedAngle,
-                                                  //         motor stopDutyCycle, turn finished, turnslowRightTo command = false
+    // Input:  int angle16, startAngle, turnAngle
+    // Output: int turnedAngle,
+    //         motor stopDutyCycle, turn finished, turnslowRightTo command = false
 
     if (((startAngle - angle16) < 0) && ((startAngle - angle16) > -15)) turnedAngle = 0; // Filter measuring faults (-14..-1)
     else turnedAngle = (3600 + startAngle - angle16) % 3600;                             // calculate turned angle
@@ -433,11 +462,11 @@ void MotorControl()
     }
   }
 
-  if (turnSlowRightToCommand) {                   // Turn right to (see project documentation)
-                                                  // *****************************************
-                                                  // Input:  angle16, startAngle, turnAngle
-                                                  // Output: int turnedAngle,
-                                                  //         motor stopDutyCycle, turn finished, turnslowRightTo command = false
+  if (turnSlowRightToCommand) {                   // Supervision turn right to (see project documentation)
+                                                  // *****************************************************
+    // Input:  angle16, startAngle, turnAngle
+    // Output: int turnedAngle,
+    //         motor stopDutyCycle, turn finished, turnslowRightTo command = false
 
     if (((angle16 - startAngle) < 0) && ((angle16 - startAngle) > -15)) turnedAngle = 0; // Filter measuring faults (-14..-1)
     else turnedAngle = (3600 + angle16 - startAngle) % 3600;                             // calculate turned angle
@@ -471,11 +500,11 @@ void MotorControl()
                                                   // **********************************************************
 
     if (sequenceCounter90 == 1) {                 // 1------------------------------------------------------
-      steeringDutyCycle12 = fullDutyCycle12 + (fullDutyCycle12 * steeringRate / 100);
-      steeringDutyCycle34 = fullDutyCycle34 + (fullDutyCycle34 * steeringRate / 100);
+      steeringDutyCycle12 = slowDutyCycle12 + (slowDutyCycle12 * steeringRate / 100);
+      steeringDutyCycle34 = slowDutyCycle34 + (slowDutyCycle34 * steeringRate / 100);
       beta = 90.0;                                                                                       // Robot deviation from target (degrees)
       bs = sqrt(2 * pow(turningRadius, 2) - 2 * pow(turningRadius, 2) * cos(beta * PI / 180)) / 2;       // b' (cm)
-      betas = int(10 * acos(- ((pow(bs, 2) - 2 * pow(turningRadius, 2)) / (2 * pow(turningRadius, 2))))* 180 / PI);// beta' (degrees *10)
+      betas = int(10 * acos(- ((pow(bs, 2) - 2 * pow(turningRadius, 2)) / (2 * pow(turningRadius, 2)))) * 180 / PI); // beta' (degrees *10)
       alpha = int((int(10 * beta) - betas) / 2);                                                         // alpha (degrees *10)
 
       originAngle = angle16;                      // origin angle
@@ -487,8 +516,10 @@ void MotorControl()
       digitalWrite(motor3Direction, backward);    // back left alpha
       digitalWrite(motor1Direction, backward);
 
-      steeringservo.attach(ServoPWM);             // Servo left
-      steeringservo.write(ServoLeft);
+      if (not steeringservo.attached()){
+        steeringservo.attach(ServoPWM, ServoPmin, ServoPmax);         
+      }             
+      steeringservo.write(ServoLeft);             // Servo left
 
       analogWrite(motor1PWM, steeringDutyCycle12);// run
       analogWrite(motor3PWM, slowDutyCycle34);
@@ -513,8 +544,10 @@ void MotorControl()
       digitalWrite(motor3Direction, forward);      // forward right beta'
       digitalWrite(motor1Direction, forward);
 
-      steeringservo.attach(ServoPWM);              // Servo right
-      steeringservo.write(ServoRight);
+      if (not steeringservo.attached()){
+        steeringservo.attach(ServoPWM, ServoPmin, ServoPmax);         
+      }                   
+      steeringservo.write(ServoRight);             // Servo right
 
       analogWrite(motor1PWM, slowDutyCycle12);     // run
       analogWrite(motor3PWM, steeringDutyCycle34);
@@ -538,8 +571,10 @@ void MotorControl()
       digitalWrite(motor3Direction, backward);     // back left alpha
       digitalWrite(motor1Direction, backward);
 
-      steeringservo.attach(ServoPWM);              // Servo left
-      steeringservo.write(ServoLeft);
+      if (not steeringservo.attached()){
+        steeringservo.attach(ServoPWM, ServoPmin, ServoPmax);         
+      }               
+      steeringservo.write(ServoLeft);              // Servo left
 
       analogWrite(motor1PWM, steeringDutyCycle12); // run
       analogWrite(motor3PWM, slowDutyCycle34);
@@ -556,8 +591,10 @@ void MotorControl()
         turnSlow90RightCommand = false;            // target reached
         sequenceCounter90 = 0;
 
-        steeringservo.attach(ServoPWM);            // Servo middle
-        steeringservo.write(ServoMiddle);
+        if (not steeringservo.attached()){
+          steeringservo.attach(ServoPWM, ServoPmin, ServoPmax);         
+        }             
+        steeringservo.write(ServoMiddle);          // Servo middle
 
         Serial.print("S@Turn finished: ");         // remote status after full 90 degrees only
         Serial.println(turnFinished);
@@ -567,14 +604,14 @@ void MotorControl()
   }
 
   if (turnSlow90LeftBackwardFirstCommand) {       // Turn left 90 degrees sequence backward first (see project documentation)
-                                                  // ************************************************************************
+    // ************************************************************************
     if (sequenceCounter90 = 1) {                  // 1
-      
-      steeringDutyCycle12 = fullDutyCycle12 + (fullDutyCycle12 * steeringRate / 100);
-      steeringDutyCycle34 = fullDutyCycle34 + (fullDutyCycle34 * steeringRate / 100);
+
+      steeringDutyCycle12 = slowDutyCycle12 + (slowDutyCycle12 * steeringRate / 100);
+      steeringDutyCycle34 = slowDutyCycle34 + (slowDutyCycle34 * steeringRate / 100);
       beta = 90.0;                                                                                       // Robot deviation from target (degrees)
       bs = sqrt(2 * pow(turningRadius, 2) - 2 * pow(turningRadius, 2) * cos(beta * PI / 180)) / 2;       // b' (cm)
-      betas = int(10 * acos(- ((pow(bs, 2) - 2 * pow(turningRadius, 2)) / (2 * pow(turningRadius, 2))))* 180 / PI);// beta' (degrees *10)
+      betas = int(10 * acos(- ((pow(bs, 2) - 2 * pow(turningRadius, 2)) / (2 * pow(turningRadius, 2)))) * 180 / PI); // beta' (degrees *10)
       alpha = int((int(10 * beta) - betas) / 2);                                                         // alpha (degrees *10)
 
       originAngle = angle16;                      // origin angle
@@ -585,8 +622,10 @@ void MotorControl()
       digitalWrite(motor3Direction, backward);    // back right alpha
       digitalWrite(motor1Direction, backward);
 
-      steeringservo.attach(ServoPWM);             // Servo right
-      steeringservo.write(ServoRight);
+      if (not steeringservo.attached()){
+        steeringservo.attach(ServoPWM, ServoPmin, ServoPmax);
+      }              
+      steeringservo.write(ServoRight);            // Servo right
 
       analogWrite(motor1PWM, slowDutyCycle12);    // run
       analogWrite(motor3PWM, steeringDutyCycle34);
@@ -606,13 +645,15 @@ void MotorControl()
     if (sequenceCounter90 == 3) {                  // 3------------------------------------------------------
       startAngle = angle16;                        // store start angle
       turnAngleRelative = betas;                   // relative turn angle
-      turnAngle = (angle16 + betas) % 3600;        // final angle
+      turnAngle = (3600 + angle16 - betas) % 3600; // final angle
 
       digitalWrite(motor3Direction, forward);      // forward left beta'
       digitalWrite(motor1Direction, forward);
 
-      steeringservo.attach(ServoPWM);              // Servo left
-      steeringservo.write(ServoLeft);
+      if (not steeringservo.attached()){
+        steeringservo.attach(ServoPWM, ServoPmin, ServoPmax);
+      }               
+      steeringservo.write(ServoLeft);              // Servo left
 
       analogWrite(motor1PWM, steeringDutyCycle12); // run
       analogWrite(motor3PWM, slowDutyCycle34);
@@ -629,15 +670,17 @@ void MotorControl()
 
     if (sequenceCounter90 == 5) {                  // 5------------------------------------------------------
       startAngle = angle16;                        // store start angle
-      alpha = (originAngle + 900 - angle16) % 3600;// calculated rest angle
+      alpha = (originAngle - 900 - angle16) % 3600;// calculated rest angle
       turnAngleRelative = alpha;                   // relative turn angle
-      turnAngle = (angle16 + alpha) % 3600;        // final angle
+      turnAngle = (3600 + angle16 - alpha) % 3600;        // final angle
 
       digitalWrite(motor3Direction, backward);     // back right alpha
       digitalWrite(motor1Direction, backward);
 
-      steeringservo.attach(ServoPWM);              // Servo left
-      steeringservo.write(ServoRight);
+      if (not steeringservo.attached()){
+        steeringservo.attach(ServoPWM, ServoPmin, ServoPmax);
+      }               
+      steeringservo.write(ServoRight);             // Servo right
 
       analogWrite(motor1PWM, slowDutyCycle12);     // run
       analogWrite(motor3PWM, steeringDutyCycle34);
@@ -654,24 +697,22 @@ void MotorControl()
         turnSlow90LeftBackwardFirstCommand = false;// target reached
         sequenceCounter90 = 0;
 
-        steeringservo.attach(ServoPWM);            // Servo middle
-        steeringservo.write(ServoMiddle);
-
-        Serial.print("S@Turn finished: ");         // remote status after full 90 degrees only
-        Serial.println(turnFinished);
-
+        if (not steeringservo.attached()){
+          steeringservo.attach(ServoPWM, ServoPmin, ServoPmax);
+        }             
+        steeringservo.write(ServoMiddle);         // Servo middle
       }
     }
   }
   if (turnSlow90LeftForwardFirstCommand) {        // Turn left 90 degrees sequence forward first (see project documentation)
-                                                  // ***********************************************************************
+    // ***********************************************************************
     if (sequenceCounter90 = 1) {                  // 1
-      
-      steeringDutyCycle12 = fullDutyCycle12 + (fullDutyCycle12 * steeringRate / 100);
-      steeringDutyCycle34 = fullDutyCycle34 + (fullDutyCycle34 * steeringRate / 100);
+
+      steeringDutyCycle12 = slowDutyCycle12 + (slowDutyCycle12 * steeringRate / 100);
+      steeringDutyCycle34 = slowDutyCycle34 + (slowDutyCycle34 * steeringRate / 100);
       beta = 90.0;                                                                                       // Robot deviation from target (degrees)
       bs = sqrt(2 * pow(turningRadius, 2) - 2 * pow(turningRadius, 2) * cos(beta * PI / 180)) / 2;       // b' (cm)
-      betas = int(10 * acos(- ((pow(bs, 2) - 2 * pow(turningRadius, 2)) / (2 * pow(turningRadius, 2))))* 180 / PI);// beta' (degrees *10)
+      betas = int(10 * acos(- ((pow(bs, 2) - 2 * pow(turningRadius, 2)) / (2 * pow(turningRadius, 2)))) * 180 / PI); // beta' (degrees *10)
       alpha = int((int(10 * beta) - betas) / 2);                                                         // alpha (degrees *10)
 
       originAngle = angle16;                      // origin angle
@@ -682,8 +723,10 @@ void MotorControl()
       digitalWrite(motor3Direction, forward);     // forward left alpha
       digitalWrite(motor1Direction, forward);
 
-      steeringservo.attach(ServoPWM);             // Servo left
-      steeringservo.write(ServoLeft);
+      if (not steeringservo.attached()){
+        steeringservo.attach(ServoPWM, ServoPmin, ServoPmax);
+      }               
+      steeringservo.write(ServoLeft);             // Servo left
 
       analogWrite(motor1PWM, steeringDutyCycle12);// run
       analogWrite(motor3PWM, slowDutyCycle34);
@@ -703,13 +746,15 @@ void MotorControl()
     if (sequenceCounter90 == 3) {                  // 3------------------------------------------------------
       startAngle = angle16;                        // store start angle
       turnAngleRelative = betas;                   // relative turn angle
-      turnAngle = (angle16 + betas) % 3600;        // final angle
+      turnAngle = (3600 + angle16 - betas) % 3600; // final angle
 
       digitalWrite(motor3Direction, backward);     // backward right beta'
       digitalWrite(motor1Direction, backward);
 
-      steeringservo.attach(ServoPWM);              // Servo right
-      steeringservo.write(ServoRight);
+      if (not steeringservo.attached()){
+        steeringservo.attach(ServoPWM, ServoPmin, ServoPmax);
+      }              
+      steeringservo.write(ServoRight);             // Servo right
 
       analogWrite(motor1PWM, slowDutyCycle12);     // run
       analogWrite(motor3PWM, steeringDutyCycle34);
@@ -726,15 +771,17 @@ void MotorControl()
 
     if (sequenceCounter90 == 5) {                  // 5------------------------------------------------------
       startAngle = angle16;                        // store start angle
-      alpha = (originAngle + 900 - angle16) % 3600;// calculated rest angle
+      alpha = (originAngle - 900 - angle16) % 3600;// calculated rest angle
       turnAngleRelative = alpha;                   // relative turn angle
-      turnAngle = (angle16 + alpha) % 3600;        // final angle
+      turnAngle = (3600 + angle16 - alpha) % 3600; // final angle
 
       digitalWrite(motor3Direction, forward);      // forward left alpha
       digitalWrite(motor1Direction, forward);
 
-      steeringservo.attach(ServoPWM);              // Servo left
-      steeringservo.write(ServoLeft);
+      if (not steeringservo.attached()){
+        steeringservo.attach(ServoPWM, ServoPmin, ServoPmax);
+      }              
+      steeringservo.write(ServoLeft);              // Servo left
 
       analogWrite(motor1PWM, steeringDutyCycle12); // run
       analogWrite(motor3PWM, slowDutyCycle34);
@@ -751,12 +798,10 @@ void MotorControl()
         turnSlow90LeftForwardFirstCommand = false; // target reached
         sequenceCounter90 = 0;
 
-        steeringservo.attach(ServoPWM);            // Servo middle
-        steeringservo.write(ServoMiddle);
-
-        Serial.print("S@Turn finished: ");         // remote status after full 90 degrees only
-        Serial.println(turnFinished);
-
+        if (not steeringservo.attached()){
+          steeringservo.attach(ServoPWM, ServoPmin, ServoPmax);
+        }             
+        steeringservo.write(ServoMiddle);          // Servo middle
       }
 
     }
@@ -766,77 +811,211 @@ void MotorControl()
     if (sequenceCounter180 = 1) {                    // 1----------------------------------------------------------
       sequenceCounter90 = 1;
       turnSlow90LeftForwardFirstCommand = true;      // Turn 90 degrees left forward first
-      
-      sequenceCounter180 = 2;                        // next step
+
+      sequenceCounter180 = 3;                        // next step
     }
 
+    if (sequenceCounter180 == 3) {                   // 3----------------------------------------------------------
+      if (turnSlow90LeftForwardFirstCommand == false) {
+        sequenceCounter90 = 1;
+        turnSlow90LeftBackwardFirstCommand = true;    // Turn 90 degrees left backward first
 
+        sequenceCounter180 = 4;                       // next step
 
-    if (sequenceCounter180 == 2) {                   // 2----------------------------------------------------------   
-        if (turnSlow90LeftForwardFirstCommand == false) {          
-          sequenceCounter90 = 1;
-          turnSlow90LeftBackwardFirstCommand = true; // Turn 90 degrees left backward first
-          
-          sequenceCounter180 = 3;                    // next step
-          
-        }        
+      }
     }
-    if (sequenceCounter180 == 3) {                   // 3----------------------------------------------------------    
-        if (turnSlow90LeftBackwardFirstCommand == false) {  
-          turnSlow180LeftCommand = false;
-          
-          sequenceCounter180 = 0;                  
-         }
-    }      
+    if (sequenceCounter180 == 4) {                   // 4----------------------------------------------------------
+      if (turnSlow90LeftBackwardFirstCommand == false) {
+        turnSlow180LeftCommand = false;
+
+        sequenceCounter180 = 0;
+      }
+    }
   }
 
   if (turnSlowToCommand) {                         // Turn to absolute angle sequence (see project documentation)
                                                    // ***********************************************************
                                                    // construction area!
-    if (sequenceCounterTo = 1) {                   // 1----------------------------------------------------------
+    if (sequenceCounterTo == 1) {                   // 1----------------------------------------------------------
+      turnFinished = false;
+      Serial.print("S@Turn finished: ");              // remote status for turn finished to false
+      Serial.println(turnFinished);
+      steeringDutyCycle12 = slowDutyCycle12 + (slowDutyCycle12 * steeringRate / 100);
+      steeringDutyCycle34 = slowDutyCycle34 + (slowDutyCycle34 * steeringRate / 100); 
+              
+      startAngle = angle16;                                                         // store start angle
+      targetAngle = turnAngle;                                                      // store target angle
+      i = (targetAngle - angle16);                                                  // relative angle -3600 .. 0 .. + 3600 degrees
+                                                                                    // turn angle relative -1 .. -1749 turn left; +1 .. +1850 turn right
+                                                                                    // ***************************************************************
+      turnAngleRelative = i;                                                        // - 1   .. - 1749 --> turn left; +1 .. +1850 --> turn right                                                       
+      if (i <= -1750) turnAngleRelative = i + 3600;                                 // -1750 .. - 3600 --> turn angle relative right = + 1850 .. 0
+      if (i > 1850) turnAngleRelative = i - 3600;                                   // +1851 .. + 3600 --> turn angle relative left  = - 1749 .. 0      
+      i = turnAngleRelative;                                                        // save turn angle relative
       
-        startAngle = angle16;                                                         // store start angle
-        i = (turnAngle - angle16);
-        turnAngleRelative = i;                                                        // store relative angle
-
-                                                                                      // decision turn left or right or do nothing
-        if (i < -1 || i > 1) {                                                         // do nothing in range (-1 .. +1) degrees                                                                                          
-          if (i < -1800) turnAngleRelative = i + 3600;                                  
-          if (i > 1800) turnAngleRelative = i - 3600;
-  
-          if (turnAngleRelative >= 0) {                                                 // turn right to
-                                                                                        // *************
-            turnAngle = (3600 + turnAngle - 10) % 3600;                                 // cycle tolerance
-            turnAngleRelative = (3600 + turnAngleRelative - 10) % 3600;
-            turnSlowRightToCommand = true;
-          }
-          else {                                                                        // turn left to
-                                                                                        // ************
-            turnAngleRelative = abs(turnAngleRelative);
-            turnAngle = (3600 + turnAngle + 10) % 3600;                                 // cycle tolerance
-            turnAngleRelative = (3600 + turnAngleRelative - 10) % 3600;
-            turnSlowLeftToCommand = true;
-          }
-        }
+      if (i < -1 || i > 1) {                                                        // do nothing in range (-1 .. +1) degrees
         
-        // final code
+        if (i > 0) {                                                                // turn right to
+                                                                                    // *************
+          if (  i > 1000) {                                                         // turn first 90 degrees right
+            sequenceCounterTo = 2;        
+          }
+          else {
+            sequenceCounterTo = 3;       
+          }        
+        }
+        else {                                                                      // turn left to
+                                                                                    // ************ 
+          if (i < 1000) {                                                           // turn first 90 degrees left
+            sequenceCounterTo = 20;      
+          }
+          else {
+            sequenceCounterTo = 21;       
+          }         
+        }
+      }
+    }
+    if (sequenceCounterTo == 2) {                  // 2----------------------------------------------------------
+                                                   
+      sequenceCounter90 = 1;
+      turnSlow90RightCommand = true;                // Turn 90 degrees right
+      sequenceCounterTo = 3;
+    }
 
+    if (sequenceCounterTo == 3) {                  // 3----------------------------------------------------------
+      if (turnSlow90RightCommand == false){
+
+        beta = abs(i);                              // Robot deviation from target (degrees)
+        bs = sqrt(2 * pow(turningRadius, 2) - 2 * pow(turningRadius, 2) * cos(beta * PI / 180)) / 2;       // b' (cm)
+        betas = int(10 * acos(- ((pow(bs, 2) - 2 * pow(turningRadius, 2)) / (2 * pow(turningRadius, 2)))) * 180 / PI); // beta' (degrees *10)
+        alpha = int((int(10 * beta) - betas) / 2);                                                         // alpha (degrees *10)
+  
+        originAngle = angle16;                      // origin angle
+  
+        startAngle = angle16;                       // store start angle
+        turnAngleRelative = alpha;                  // relative turn angle
+        turnAngle = (angle16 + alpha) % 3600;       // final angle
+  
+        digitalWrite(motor3Direction, backward);    // back left alpha
+        digitalWrite(motor1Direction, backward);
+  
+        if (not steeringservo.attached()){
+          steeringservo.attach(ServoPWM, ServoPmin, ServoPmax);
+        }              
+        steeringservo.write(ServoLeft);             // Servo left
+  
+        analogWrite(motor1PWM, steeringDutyCycle12);// run
+        analogWrite(motor3PWM, slowDutyCycle34);
+  
+        turnFinished = false;
+        turnSlowRightToCommand = true;              // supervise turn until turn finished
+                  
+        sequenceCounterTo = 4;                      // next step
+      }
+    }
+
+    if (sequenceCounterTo == 4) {                  // 4----------------------------------------------------------
+      if (turnFinished) sequenceCounterTo = 5;      // wait for turn
+    }
+    
+    if (sequenceCounterTo == 5) {                  // 5----------------------------------------------------------
+
+      startAngle = angle16;                        // store start angle
+      turnAngleRelative = betas;                   // relative turn angle
+      turnAngle = (angle16 + betas) % 3600;        // final angle
+
+      digitalWrite(motor3Direction, forward);      // forward right beta'
+      digitalWrite(motor1Direction, forward);
+
+      if (not steeringservo.attached()){
+        steeringservo.attach(ServoPWM, ServoPmin, ServoPmax);
+      }                
+      steeringservo.write(ServoRight);             // Servo right
+
+      analogWrite(motor1PWM, slowDutyCycle12);     // run
+      analogWrite(motor3PWM, steeringDutyCycle34);
+
+      turnFinished = false;
+      turnSlowRightToCommand = true;               // supervise turn until turn finished
+      sequenceCounterTo = 6;                       // next step
+    }
+
+    if (sequenceCounterTo == 6) {                  // 6----------------------------------------------------------
+      if (turnFinished) sequenceCounterTo = 7;      // wait for turn
+    }
+
+    if (sequenceCounterTo == 7) {                  // 7----------------------------------------------------------
+      startAngle = angle16;                        // store start angle
+      alpha = (targetAngle - angle16) % 3600;      // calculated rest angle
+      turnAngleRelative = alpha;                   // relative turn angle
+      turnAngle = (angle16 + alpha) % 3600;        // final angle
+
+      digitalWrite(motor3Direction, backward);     // back left alpha
+      digitalWrite(motor1Direction, backward);
+
+      if (not steeringservo.attached()){
+        steeringservo.attach(ServoPWM, ServoPmin, ServoPmax);
+      }               
+      steeringservo.write(ServoLeft);              // Servo left
+
+      analogWrite(motor1PWM, steeringDutyCycle12); // run
+      analogWrite(motor3PWM, slowDutyCycle34);
+
+      turnFinished = false;
+      turnSlowRightToCommand = true;               // supervise turn until turn finished
+      sequenceCounterTo = 8;                       // next step 
+    }
+
+    if (sequenceCounterTo == 8) {                  // 8----------------------------------------------------------
+      if (turnFinished) sequenceCounterTo = 30;     // wait for turn
+    }
+
+    
+
+    if (sequenceCounterTo == 20) {                 // 20----------------------------------------------------------
+
+      sequenceCounter90 = 1;
+      turnSlow90LeftForwardFirstCommand = true;     // Turn 90 degrees left forward first
+        
+
+    }
+
+    if (sequenceCounterTo == 21) {                 // 21----------------------------------------------------------
+                                                    // turn to rest angle left
+      turnAngleRelative = abs(turnAngleRelative);
+      turnAngle = (3600 + targetAngle + 10) % 3600; // cycle tolerance
+      turnAngleRelative = (3600 + turnAngleRelative - 10) % 3600;
+      turnSlowLeftToCommand = true;
+        
+
+    }
+
+    if (sequenceCounterTo == 22) {                 // 22----------------------------------------------------------
+                                                    // wait for turn   
+
+    }
+    
+    if (sequenceCounterTo == 30) {                 // 30----------------------------------------------------------
+      
+      turnSlowToCommand = false;
+      sequenceCounterTo == 0;
+      if (not steeringservo.attached()){
+        steeringservo.attach(ServoPWM, ServoPmin, ServoPmax);
+      }                
+      steeringservo.write(ServoMiddle);             // Servo middle   
+      Serial.print("S@Turn finished: ");            // remote status after automatic turn only
+      Serial.println(turnFinished);
     }
   }
 }
 
+
 // Encoders
 // *******************************************************************************************************************************
 
-#define encoderRightA 29
-#define encoderRightB 28
-#define encoderLeftA 27
-#define encoderLeftB 26
+#define RT_PHASE_A (PIND & B00010000)
+#define RT_PHASE_B (PIND & B00001000)
 
-#define LT_PHASE_A digitalRead(encoderLeftA)
-#define LT_PHASE_B digitalRead(encoderLeftB)
-#define RT_PHASE_A digitalRead(encoderRightA)
-#define RT_PHASE_B digitalRead(encoderRightB)
 static volatile int16_t encDeltaLt, encDeltaRt;
 static int16_t lastLt = 0, lastRt = 0;
 int encLt = 0, encRt = 0;
@@ -844,17 +1023,6 @@ int encLt = 0, encRt = 0;
 ISR( TIMER2_COMPA_vect )
 {
   int16_t val, diff;
-
-  val = 0;
-  if ( LT_PHASE_A )
-    val = 3;
-  if ( LT_PHASE_B )
-    val ^= 1; // convert gray to binary
-  diff = lastLt - val; // difference last - new
-  if ( diff & 1 ) { // bit 0 = value (1)
-    lastLt = val; // store new as next last
-    encDeltaLt += (diff & 2) - 1; // bit 1 = direction (+/-)
-  }
 
   val = 0;
   if ( RT_PHASE_A )
@@ -887,35 +1055,15 @@ void QuadratureEncoderInit(void)
   TIMSK2 |= (1 << OCIE2A);
 
   val = 0;
-  if (LT_PHASE_A)
-    val = 3;
-  if (LT_PHASE_B)
-    val ^= 1;
-  lastLt = val;
-  encDeltaLt = 0;
-
-  val = 0;
   if (RT_PHASE_A)
     val = 3;
   if (RT_PHASE_B)
     val ^= 1;
   lastRt = val;
   encDeltaRt = 0;
-
-  encLt = 0;
   encRt = 0;
   sei();
   return;
-}
-
-int16_t QuadratureEncoderReadLt( void ) // read single step encoders
-{
-  int16_t val;
-  cli();
-  val = encDeltaLt;
-  encDeltaLt = 0;
-  sei();
-  return val; // counts since last call
 }
 
 int16_t QuadratureEncoderReadRt( void ) // read single step encoders
@@ -930,19 +1078,6 @@ int16_t QuadratureEncoderReadRt( void ) // read single step encoders
 
 // US sensors
 // ***************************************************************************************************************
-#define distancefRightEcho 36
-#define distancefRightTrig 37
-#define distancefRightLimit 20
-int distancefRightPulseTime = 0;
-int distancefRightCm = 0;
-boolean distancefRightObstruction = false;
-
-#define distancefLeftEcho 42
-#define distancefLeftTrig 43
-#define distancefLeftLimit 20
-int distancefLeftPulseTime = 0;
-int distancefLeftCm = 0;
-boolean distancefLeftObstruction = false;
 
 #define distancebRightEcho 48
 #define distancebRightTrig 49
@@ -1023,8 +1158,6 @@ void setup()
   Serial.setTimeout(10);
 
   pinMode(ledPin, OUTPUT);
-  pinMode(distancefRightTrig, OUTPUT);
-  pinMode(distancefLeftTrig, OUTPUT);
   pinMode(distancebLeftTrig, OUTPUT);
   pinMode(distancebRightTrig, OUTPUT);
   pinMode(distanceFrontTrig, OUTPUT);
@@ -1040,7 +1173,7 @@ void setup()
   // Servo initiation
   // ************************************************************************************************************
 
-  steeringservo.attach(ServoPWM);
+  steeringservo.attach(ServoPWM, ServoPmin, ServoPmax);
   steeringservo.write(ServoMiddle);            // middle position
 
   // CMPS11 startup
@@ -1078,10 +1211,6 @@ void setup()
   Serial.println(UpitchLimit, DEC);
   Serial.print("MV@Pitch: LL ");
   Serial.println(LpitchLimit, DEC);
-  Serial.print("MV@Distance fleft: LL ");
-  Serial.println(distancefLeftLimit);
-  Serial.print("MV@Distance fright: LL ");
-  Serial.println(distancefRightLimit);
   Serial.print("MV@Distance bleft: LL ");
   Serial.println(distancebLeftLimit);
   Serial.print("MV@Distance bright: LL ");
@@ -1092,6 +1221,8 @@ void setup()
   Serial.println(distanceUpLimit);
   Serial.print("MV@Distance down: UL ");
   Serial.println(distanceDownLimit);
+  Serial.print("S@Turn finished: ");          // remote status for turn finished to true
+  Serial.println(turnFinished);
 }
 
 // Loop
@@ -1188,34 +1319,6 @@ void loop()
 
     // Read distances to obstructions (US-015 contains a temperature compensation)
     // *************************************************************************************************************************************
-    //    digitalWrite(distancefLeftTrig, LOW);                               // front Left
-    //    delayMicroseconds(5);                                               // **********
-    //    digitalWrite(distancefLeftTrig, HIGH);
-    //    delayMicroseconds(10);
-    //    digitalWrite(distancefLeftTrig, LOW);
-    //    distancefLeftPulseTime = pulseIn(distancefLeftEcho, HIGH, 23600);   // Range limited to 2 x 200cm (timeout delivers 0)
-    //    if (distancefLeftPulseTime > 60) {                                  // filter 0 of timeout
-    //      distancefLeftCm = distancefLeftPulseTime / 59;                    // 29.4us / cm (two ways)
-    //    }
-    //    else {
-    //      distancefLeftCm = 210;                                            // out of range
-    //    }
-    //    distancefLeftObstruction = (distancefLeftCm < distancefLeftLimit);  // Obstruction detected front left
-    //
-    //    digitalWrite(distancefRightTrig, LOW);                              // front Right
-    //    delayMicroseconds(5);                                               // ***********
-    //    digitalWrite(distancefRightTrig, HIGH);
-    //    delayMicroseconds(10);
-    //    digitalWrite(distancefRightTrig, LOW);
-    //    distancefRightPulseTime = pulseIn(distancefRightEcho, HIGH, 23600);  // Range limited to 200cm
-    //    if (distancefRightPulseTime > 60) {                                  // disturbance filter
-    //      distancefRightCm = distancefRightPulseTime / 59;
-    //    }
-    //    else {
-    //      distancefRightCm = 210;                                            // out of range
-    //    }
-    //    distancefRightObstruction = (distancefRightCm < distancefRightLimit);// Obstruction detected front right
-
 
     digitalWrite(distancebLeftTrig, LOW);                               // back Left
     delayMicroseconds(5);                                               // *********
@@ -1387,14 +1490,14 @@ void loop()
 
   // Read encoders
   // *************************************************************************************************************************************
-  encLt += QuadratureEncoderReadLt(); // calculation of intermediate value (Lt, Rt) and driving distance to be done at Raspberry pi 2
+  // calculation of driving distance to be done at Raspberry pi 2
   encRt += QuadratureEncoderReadRt();
 
   // Motor control
   // *************************************************************************************************************************************
 
   MotorControl();
-  if (steeringservo.attached()) {
+  if (steeringservo.attached()&& forwardStopCommand == true) {
     delay(100);
     steeringservo.detach();
   }
@@ -1470,6 +1573,8 @@ void loop()
 
       Serial.print("S@Forward slow: ");
       Serial.println(forwardSlowCommand);
+      Serial.print("S@Backward slow: ");
+      Serial.println(backwardSlowCommand);
       Serial.print("S@Forward half: ");
       Serial.println(forwardHalfCommand);
       Serial.print("S@Forward full: ");
@@ -1568,6 +1673,10 @@ void loop()
 
       if (CommandString.startsWith("Stop")) {
         forwardStopCommand = true;
+        if (not steeringservo.attached()){
+          steeringservo.attach(ServoPWM);         
+        }
+        steeringservo.write(ServoMiddle);
       }
 
       if (CommandString.startsWith("Forward slow")) {
@@ -1619,7 +1728,7 @@ void loop()
         turnAngleRelative = 1790;
         turnAngle = (3600 + angle16 + 1790) % 3600;
         turnSlow180LeftCommand = true;
-        
+
         turnSlow90LeftBackwardFirstCommand = true; turnSlow90LeftForwardFirstCommand = false; turnSlow90RightCommand = false;
         turnSlowRightToCommand = false; turnSlowLeftToCommand = false;
         forwardStopCommand = false; forwardSlowCommand = false; forwardHalfCommand = false; forwardFullCommand = false;
@@ -1630,9 +1739,9 @@ void loop()
 
       if (CommandString.startsWith("Turn slow 90 left")) {
         turnSlow90LeftBackwardFirstCommand = true;
-        
+
         turnSlow90LeftForwardFirstCommand = false; turnSlow180LeftCommand = false; turnSlow90RightCommand = false;
-        turnSlowLeftToCommand = false; turnSlowRightToCommand = false; 
+        turnSlowLeftToCommand = false; turnSlowRightToCommand = false;
         forwardStopCommand = false; forwardSlowCommand = false; forwardHalfCommand = false; forwardFullCommand = false;
         steeringLeftCommand = false; steeringRightCommand = false; alignCommand = false;
         motorStallLimit = motorStallLimitSlow;
@@ -1640,7 +1749,7 @@ void loop()
       }
       if (CommandString.startsWith("Turn slow 90 right")) {
         turnSlow90RightCommand = true;
-        
+
         turnSlow90LeftBackwardFirstCommand = false; turnSlow90LeftForwardFirstCommand = false; turnSlow180LeftCommand = false;
         turnSlowLeftToCommand = false; turnSlowRightToCommand = false;
         forwardStopCommand = false; forwardSlowCommand = false; forwardHalfCommand = false; forwardFullCommand = false;
@@ -1652,7 +1761,7 @@ void loop()
         CommandString.replace("Turn slow to: ", "");
         turnAngle = CommandString.toInt();                                            // Absolute angle to be turned to
         turnSlowToCommand = true;
-          
+
         turnSlow90LeftBackwardFirstCommand = false; turnSlow90LeftForwardFirstCommand = false; turnSlow90RightCommand = false; turnSlow180LeftCommand = false;
         turnSlowLeftToCommand = false; turnSlowRightToCommand = false;
         forwardStopCommand = false; forwardSlowCommand = false; forwardHalfCommand = false; forwardFullCommand = false;
@@ -1686,14 +1795,14 @@ void loop()
     Serial.println(betas);
     Serial.print("I@alpha: ");
     Serial.println(alpha);
-    
+
   }
   else {
     usbDisturbance = true;                                                        // USB disturbance
     Serial.end();
     Serial.begin(baud);
     Serial.setTimeout(10);
-    delay(2000);                                                                        // wait for next trial
+    delay(2000);                                                                  // wait for next trial
   }
 
 }
