@@ -1,7 +1,7 @@
 
 //****************************************************************************************************************************************************
 // *** Arduino robot program V3
-// *** Version: 2016.09.17
+// *** Version: 2016.09.21
 // *** Developer: Wolfgang Glück
 // ***
 // *** Supported hardware:
@@ -62,8 +62,9 @@ Servo steeringservo;
 #define ServoExtreme 35
 #define ServoLeft ServoMiddle-ServoExtreme
 #define ServoRight ServoMiddle+ServoExtreme
-#define ServoPmin 500
-#define ServoPmax 1350
+#define ServoPmin 470
+#define ServoPmax 2400
+
 
 // Compass
 // *************************************************************************************************************************
@@ -128,8 +129,8 @@ boolean Arduino5VLow = false;
 // Motor
 // *******************************************************************************************************************************
 float motorStallLimit = 2.4;  // Stall limit
-float motorStallLimitSlow = 1.0;
-float motorStallLimitHalf = 1.8;
+float motorStallLimitSlow = 1.6;
+float motorStallLimitHalf = 2.0;
 float motorStallLimitFull = 2.4;
 
 // Motor right back
@@ -165,7 +166,7 @@ int alpha = 0;                          // small angle step to turn
 int betas = 0;                          // wide angle step to turn
 int i = 0;
 int targetAngle = 0;                    // turn to target angle
-float turningRadius = 46.0;             // Turning radius
+float turningRadius = 44.0;             // Turning radius
 float beta, bs = 0.0;                   // beta, b'
 boolean forwardStopCommand  = true;     // Stop command
 boolean forwardSlowCommand  = false;    // Forward slow command
@@ -188,15 +189,16 @@ boolean turnFinished = true;
 boolean alignCommand = false;
 boolean alignTrue = false;
 int stopDutyCycle           =   0;   //   0% of 256
-int slowDutyCycle12         =  65;   //  30% of 256
-int slowDutyCycle34         =  65;   //
-int halfDutyCycle12         = 113;   //
-int halfDutyCycle34         = 128;   //  50% of 256
-int fullDutyCycle12         = 197;   //
-int fullDutyCycle34         = 212;   //  80% of 256, contains 20% reserve for steering
-int steeringRate            = 20;    //    % of DutyCycle
+int slowDutyCycle12         =  25;   //  10% of 256
+int slowDutyCycle34         =  25;   //
+int halfDutyCycle12         = 100;   //  40% of 256
+int halfDutyCycle34         = 100;   //  
+int fullDutyCycle12         = 150;   //  60% of 256
+int fullDutyCycle34         = 150;   //  
+int steeringRate            = 70;    //    % of DutyCycle
 int steeringDutyCycle12     = 0;     // Calculated dutyCycle
 int steeringDutyCycle34     = 0;     // Calculated dutyCycle
+
 
 // Arrays and variables for alignment algorithm
 float SrL [10] [6] = {{1.0, 0.0, 0.0, 0.0, 0.0, 0.0},   // Left: 0  1   2    3      4      5
@@ -428,11 +430,14 @@ void MotorControl()
 
   if (turnSlowLeftToCommand) {                    // Supervision of turn left to (see project documentation)
                                                   // ****************************************
-    // Input:  int angle16, startAngle, turnAngle
-    // Output: int turnedAngle,
-    //         motor stopDutyCycle, turn finished, turnslowRightTo command = false
+    // Input:  angle16          actual angle according to compass
+    //         startAngle       angle        where the step has been startet 
+    //         turnAngle        target angle
+            
+    // Output: turnedAngle      angle relative that has been turned
+    //         motor stopDutyCycle, turn finished, turnslowLeftTo command = false
 
-    if (((startAngle - angle16) < 0) && ((startAngle - angle16) > -15)) turnedAngle = 0; // Filter measuring faults (-14..-1)
+    if (((startAngle - angle16) < 0) && ((startAngle - angle16) > -20)) turnedAngle = 0; // Filter measuring faults (-19..-1)
     else turnedAngle = (3600 + startAngle - angle16) % 3600;                             // calculate turned angle
 
     if (((((turnAngle >= 0) && (turnAngle < 1800))                                                    // brown T1, T2
@@ -464,11 +469,14 @@ void MotorControl()
 
   if (turnSlowRightToCommand) {                   // Supervision turn right to (see project documentation)
                                                   // *****************************************************
-    // Input:  angle16, startAngle, turnAngle
-    // Output: int turnedAngle,
+    // Input:  angle16          actual angle according to compass
+    //         startAngle       angle        where the step has been startet 
+    //         turnAngle        target angle
+    
+    // Output: turnedAngle      angle relative that has been turned
     //         motor stopDutyCycle, turn finished, turnslowRightTo command = false
 
-    if (((angle16 - startAngle) < 0) && ((angle16 - startAngle) > -15)) turnedAngle = 0; // Filter measuring faults (-14..-1)
+    if (((angle16 - startAngle) < 0) && ((angle16 - startAngle) > -20)) turnedAngle = 0; // Filter measuring faults (-19..-1)
     else turnedAngle = (3600 + angle16 - startAngle) % 3600;                             // calculate turned angle
 
     if (((((turnAngle >= 1800) && (turnAngle < 3600))                                             // violet T3, T4
