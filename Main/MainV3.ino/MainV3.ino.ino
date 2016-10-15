@@ -1,7 +1,7 @@
 
 //****************************************************************************************************************************************************
 // *** Arduino robot program V3
-// *** Version: 2016.10.08
+// *** Version: 2016.10.15
 // *** Developer: Wolfgang Glück
 // ***
 // *** Supported hardware:
@@ -197,7 +197,7 @@ float LS = 165.2;                       // length of tie rod
 float rA = 27.818;                      // axle journal length
 float rS = 18.567;                      // Servo lever length
 float WAR = 26.0;                       // axle journal angle
-float ADM = ADA / 20;                   // distance between axle journal turning point and chissis middle point
+float ADM = ADA / 20;                   // distance between axle journal turning point and chassis middle point
 float WI, WA, x, xs, beta, bc, delta = 0.0; // variables for calculaton of WS
 boolean forwardStopCommand  = true;     // Stop command
 boolean forwardSlowCommand  = false;    // Forward slow command
@@ -350,23 +350,21 @@ void MotorControl()
     digitalWrite(motor3Direction, forward);
     steeringDutyCycle12 = slowDutyCycle12 + (slowDutyCycle12 * steeringRate / 100);
     steeringDutyCycle34 = slowDutyCycle34 + (slowDutyCycle34 * steeringRate / 100);
+    WS = 35.0;
     if (steeringLeftCommand) {
       analogWrite(motor3PWM, slowDutyCycle34);  // Steering Left
       analogWrite(motor1PWM, steeringDutyCycle12);
-      WS = 35.0;
       ServoControl("WSleft", WS);
     }
     else {
       if (steeringRightCommand) {
         analogWrite(motor3PWM, steeringDutyCycle34); // Steering Right
         analogWrite(motor1PWM, slowDutyCycle12);
-        WS = 35.0;
         ServoControl("WSright", WS);
       }
       else {
         analogWrite(motor1PWM, slowDutyCycle12); // Steering ahead
         analogWrite(motor3PWM, slowDutyCycle34);
-        WS = 0.0;
         ServoControl("WSmiddle", WS);
       }
     }
@@ -377,23 +375,21 @@ void MotorControl()
     digitalWrite(motor3Direction, backward);
     steeringDutyCycle12 = slowDutyCycle12 + (slowDutyCycle12 * steeringRate / 100);
     steeringDutyCycle34 = slowDutyCycle34 + (slowDutyCycle34 * steeringRate / 100);
+    WS = 35.0;
     if (steeringLeftCommand) {
       analogWrite(motor3PWM, slowDutyCycle34);   // Steering Left
       analogWrite(motor1PWM, steeringDutyCycle12);
-      WS = 35.0;
       ServoControl("WSleft", WS);
     }
     else {
       if (steeringRightCommand) {
         analogWrite(motor3PWM, steeringDutyCycle34);  // Steering Right
         analogWrite(motor1PWM, slowDutyCycle12);
-        WS = 35.0;
         ServoControl("WSright", WS);
       }
       else {
         analogWrite(motor1PWM, slowDutyCycle12);      // Steering ahead
         analogWrite(motor3PWM, slowDutyCycle34);
-        WS = 0.0;
         ServoControl("WSmiddle", WS);
       }
     }
@@ -404,23 +400,21 @@ void MotorControl()
     digitalWrite(motor3Direction, forward);
     steeringDutyCycle12 = halfDutyCycle12 + (halfDutyCycle12 * steeringRate / 100);
     steeringDutyCycle34 = halfDutyCycle34 + (halfDutyCycle34 * steeringRate / 100);
+    WS = 35.0;
     if (steeringLeftCommand) {
       analogWrite(motor3PWM, halfDutyCycle34);// Steering Left
       analogWrite(motor1PWM, steeringDutyCycle12);
-      WS = 35.0;
       ServoControl("WSleft", WS);
     }
     else {
       if (steeringRightCommand) {
         analogWrite(motor3PWM, steeringDutyCycle34);  // Steering Right
         analogWrite(motor1PWM, halfDutyCycle12);
-        WS = 35.0;
         ServoControl("WSright", WS);
       }
       else {
         analogWrite(motor3PWM, halfDutyCycle34);  // Steering ahead
         analogWrite(motor1PWM, halfDutyCycle12);
-        WS = 0.0;
         ServoControl("WSmiddle", WS);
       }
     }
@@ -431,36 +425,36 @@ void MotorControl()
     digitalWrite(motor3Direction, forward);
     steeringDutyCycle12 = fullDutyCycle12 + (fullDutyCycle12 * steeringRate / 100);
     steeringDutyCycle34 = fullDutyCycle34 + (fullDutyCycle34 * steeringRate / 100);
+    WS = 35.0;
     if (steeringLeftCommand) {
       analogWrite(motor3PWM, fullDutyCycle34);// Steering Left
       analogWrite(motor1PWM, steeringDutyCycle12);
-      WS = 35.0;
       ServoControl("WSleft", WS);
     }
     else {
       if (steeringRightCommand) {
         analogWrite(motor3PWM, steeringDutyCycle34);  // Steering Right
         analogWrite(motor1PWM, fullDutyCycle12);
-        WS = 35.0;
         ServoControl("WSright", WS);
       }
       else {
         analogWrite(motor1PWM, fullDutyCycle12);      // Steering ahead
         analogWrite(motor3PWM, fullDutyCycle34);
-        WS = 0.0;
         ServoControl("WSmiddle", WS);
       }
     }
   }
 
-  if (turnSlowLeftToCommand) {                    // Supervision of turn left to (see project documentation)
-    // ****************************************
+  if (turnSlowLeftToCommand) {                    
+    // Supervision of turn left to (see project documentation)
+    // *******************************************************
     // Input:  angle16          actual angle according to compass
     //         startAngle       angle        where the step has been startet
     //         turnAngle        target angle
 
     // Output: turnedAngle      angle relative that has been turned
-    //         motor stopDutyCycle, turn finished, turnslowLeftTo command = false
+    //         motor stopDutyCycle, turn finished,  
+    //         turnSlowLeftTo command = false, turnSlowLeftBackwardFirstCommand = false, turnSlowLeftForwardFirstCommand = false
 
     if (((startAngle - angle16) < 0) && ((startAngle - angle16) > -20)) turnedAngle = 0; // Filter measuring faults (-19..-1)
     else turnedAngle = (3600 + startAngle - angle16) % 3600;                             // calculate turned angle
@@ -485,20 +479,20 @@ void MotorControl()
       analogWrite(motor1PWM, stopDutyCycle);
       analogWrite(motor3PWM, stopDutyCycle);
       turnSlowLeftToCommand = false;
-      turnSlow90LeftBackwardFirstCommand = false;  // fast stop
-      turnSlow90LeftForwardFirstCommand = false;   // fast stop
       turnFinished = true;                         // local status
     }
   }
 
-  if (turnSlowRightToCommand) {                   // Supervision turn right to (see project documentation)
+  if (turnSlowRightToCommand) {                   
+    // Supervision turn right to (see project documentation)
     // *****************************************************
     // Input:  angle16          actual angle according to compass
     //         startAngle       angle        where the step has been startet
     //         turnAngle        target angle
 
     // Output: turnedAngle      angle relative that has been turned
-    //         motor stopDutyCycle, turn finished, turnslowRightTo command = false
+    //         motor stopDutyCycle, turn finished,
+    //         turnslowRightTo command = false
 
     if (((angle16 - startAngle) < 0) && ((angle16 - startAngle) > -20)) turnedAngle = 0; // Filter measuring faults (-19..-1)
     else turnedAngle = (3600 + angle16 - startAngle) % 3600;                             // calculate turned angle
@@ -528,6 +522,7 @@ void MotorControl()
 
     }
   }
+  
   if (turnSlow90RightCommand) {                   // Turn right 90 degrees sequence backward first (see project documentation)
     // *************************************************************************
 
@@ -571,7 +566,6 @@ void MotorControl()
 
       digitalWrite(motor3Direction, forward);      // forward right beta'
       digitalWrite(motor1Direction, forward);
-      WS = 35.0;
       ServoControl("WSright", WS);                 // Servo right
 
       analogWrite(motor1PWM, slowDutyCycle12);     // run
@@ -595,7 +589,6 @@ void MotorControl()
 
       digitalWrite(motor3Direction, backward);     // back left alpha
       digitalWrite(motor1Direction, backward);
-      WS = 35.0;
       ServoControl("WSleft", WS);                  // Servo left
 
       analogWrite(motor1PWM, steeringDutyCycle12); // run
@@ -624,7 +617,7 @@ void MotorControl()
 
   if (turnSlow90LeftBackwardFirstCommand) {       // Turn left 90 degrees sequence backward first (see project documentation)
     // ************************************************************************
-    if (sequenceCounter90 = 1) {                  // 1
+    if (sequenceCounter90 == 1) {                 // 1
 
       steeringDutyCycle12 = slowDutyCycle12 + (slowDutyCycle12 * steeringRate / 100);
       steeringDutyCycle34 = slowDutyCycle34 + (slowDutyCycle34 * steeringRate / 100);
@@ -665,7 +658,6 @@ void MotorControl()
 
       digitalWrite(motor3Direction, forward);      // forward left beta'
       digitalWrite(motor1Direction, forward);
-      WS = 35.0;
       ServoControl("WSleft", WS);                  // Servo left
 
       analogWrite(motor1PWM, steeringDutyCycle12); // run
@@ -683,13 +675,12 @@ void MotorControl()
 
     if (sequenceCounter90 == 5) {                  // 5------------------------------------------------------
       startAngle = angle16;                        // store start angle
-      alpha = (originAngle - 900 - angle16) % 3600;// calculated rest angle
+      alpha = (3600 + angle16 - (3600 + originAngle - 900)% 3600) % 3600;// calculated rest angle
       turnAngleRelative = alpha;                   // relative turn angle
       turnAngle = (3600 + angle16 - alpha) % 3600;        // final angle
 
       digitalWrite(motor3Direction, backward);     // back right alpha
       digitalWrite(motor1Direction, backward);
-      WS = 35.0;
       ServoControl("WSright", WS);;                // Servo right
 
       analogWrite(motor1PWM, slowDutyCycle12);     // run
@@ -714,7 +705,7 @@ void MotorControl()
 
   if (turnSlow90LeftForwardFirstCommand) {        // Turn left 90 degrees sequence forward first (see project documentation)
     // ***********************************************************************
-    if (sequenceCounter90 = 1) {                  // 1
+    if (sequenceCounter90 == 1) {                 // 1
 
       steeringDutyCycle12 = slowDutyCycle12 + (slowDutyCycle12 * steeringRate / 100);
       steeringDutyCycle34 = slowDutyCycle34 + (slowDutyCycle34 * steeringRate / 100);
@@ -755,7 +746,6 @@ void MotorControl()
 
       digitalWrite(motor3Direction, backward);     // backward right beta'
       digitalWrite(motor1Direction, backward);
-      WS =  35.0;
       ServoControl("WSright", WS);;                // Servo right
 
       analogWrite(motor1PWM, slowDutyCycle12);     // run
@@ -773,13 +763,12 @@ void MotorControl()
 
     if (sequenceCounter90 == 5) {                  // 5------------------------------------------------------
       startAngle = angle16;                        // store start angle
-      alpha = (originAngle - 900 - angle16) % 3600;// calculated rest angle
+      alpha = (3600 + angle16 - (3600 + originAngle - 900)% 3600) % 3600;// calculated rest angle
       turnAngleRelative = alpha;                   // relative turn angle
       turnAngle = (3600 + angle16 - alpha) % 3600; // final angle
 
       digitalWrite(motor3Direction, forward);      // forward left alpha
       digitalWrite(motor1Direction, forward);
-      WS = 35.0;
       ServoControl("WSleft", WS);;                 // Servo left
 
       analogWrite(motor1PWM, steeringDutyCycle12); // run
@@ -1218,7 +1207,7 @@ void loop()
   // LED heart beat and cycle time control
   // *********************************************************************************************************************************
   digitalWrite(ledPin, digitalRead(ledPin) ^ 1);   // toggle LED pin by XOR
-  // regulation of cycle time because of intermediateAngle calculation  total cycletime should be <= 500 ms
+  // total cycletime <= 500 ms
 
   if (turnFinished == true) {
     // Read battery probe and check limit if no turn is running (shorten cycle time)
