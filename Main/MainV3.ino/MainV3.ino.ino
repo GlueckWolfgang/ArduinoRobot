@@ -1,7 +1,7 @@
 
 //****************************************************************************************************************************************************
 // *** Arduino robot program V3
-// *** Version: 2016.10.15
+// *** Version: 2016.10.16
 // *** Developer: Wolfgang Glück
 // ***
 // *** Supported hardware:
@@ -794,7 +794,7 @@ void MotorControl()
 
   if (turnSlow180LeftCommand) {                    // Turn left 180 degrees sequence (see project documentation)
     // ***********************************************************
-    if (sequenceCounter180 = 1) {                    // 1----------------------------------------------------------
+    if (sequenceCounter180 == 1) {                    // 1----------------------------------------------------------
       sequenceCounter90 = 1;
       turnSlow90LeftForwardFirstCommand = true;      // Turn 90 degrees left forward first
 
@@ -1453,7 +1453,7 @@ void loop()
     emergencyStop =  battery12VLow || battery5VLow  || Arduino5VLow
                      //                     || distanceFrontObstruction
                      || motor1Stall  || motor3Stall
-                     || UpitchLimitExceeded  || LpitchLimitExceeded || UrollLimitExceeded  || LrollLimitExceeded
+                     //|| UpitchLimitExceeded  || LpitchLimitExceeded || UrollLimitExceeded  || LrollLimitExceeded
 
                      //                     || distanceDownObstruction
                      //                     || wlanDisturbance
@@ -1700,7 +1700,7 @@ void loop()
         turnAngle = (3600 + angle16 + 1790) % 3600;
         turnSlow180LeftCommand = true;
 
-        turnSlow90LeftBackwardFirstCommand = true; turnSlow90LeftForwardFirstCommand = false; turnSlow90RightCommand = false;
+        turnSlow90LeftBackwardFirstCommand = false; turnSlow90LeftForwardFirstCommand = false; turnSlow90RightCommand = false;
         turnSlowRightToCommand = false; turnSlowLeftToCommand = false;
         forwardStopCommand = false; forwardSlowCommand = false; forwardHalfCommand = false; forwardFullCommand = false;
         steeringLeftCommand = false; steeringRightCommand = false; alignCommand = false;
@@ -1710,8 +1710,9 @@ void loop()
 
       if (CommandString.startsWith("Turn slow 90 left")) {
         turnSlow90LeftBackwardFirstCommand = true;
+        turnSlow90LeftForwardFirstCommand = false; 
 
-        turnSlow90LeftForwardFirstCommand = false; turnSlow180LeftCommand = false; turnSlow90RightCommand = false;
+        turnSlow180LeftCommand = false; turnSlow90RightCommand = false;
         turnSlowLeftToCommand = false; turnSlowRightToCommand = false;
         forwardStopCommand = false; forwardSlowCommand = false; forwardHalfCommand = false; forwardFullCommand = false;
         steeringLeftCommand = false; steeringRightCommand = false; alignCommand = false;
