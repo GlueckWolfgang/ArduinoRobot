@@ -1,6 +1,6 @@
 //***********************************************************************************
 // *** Arduino CMPS11 test- and calibration program
-// *** Version: 2016.04.16
+// *** Version: 2016.10.17
 // *** Developer: Wolfgang Glück
 // ***
 // *** Supported hardware:
@@ -176,8 +176,6 @@ void loop() {
     angle16 = high_byte;                       // Calculate 16 bit angle
     angle16 <<= 8;
     angle16 += low_byte;
-    angle16 += 1800;                           // correction of 180 degrees mounting difference to heading
-    angle16 = angle16 % 3600;
     if ((angle16 >= 3595) || (angle16 <= 5)) angle16 = 0;               // Hysteresis +- 0.5 degree arount 0 degrees
   
     // calculate sliding intermediate value over the last 10 values
