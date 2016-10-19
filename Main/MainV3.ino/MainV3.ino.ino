@@ -1,7 +1,7 @@
 
 //****************************************************************************************************************************************************
 // *** Arduino robot program V3
-// *** Version: 2016.10.18
+// *** Version: 2016.10.19
 // *** Developer: Wolfgang Glück
 // ***
 // *** Supported hardware:
@@ -228,11 +228,11 @@ void threeStepTurnAngles()
   d = e / sin(atan(e / turningRadius));
   bs = sqrt(2 * pow(d, 2) - 2 * pow(d, 2) * cos(beta * PI / 180)) / 2;                                           // b' (cm)
   betas = int(10 * acos(- ((pow(bs, 2) - 2 * pow(turningRadius, 2)) / (2 * pow(turningRadius, 2)))) * 180 / PI); // beta' (degrees *10)
-  betas = betas - 30;                                                                                            // allowance for breaking phase                                                              
+  betas = betas - 20;                                                                                            // allowance for braking phase                                                              
   gamma = int(10 * atan(e / turningRadius) * 180 / PI);
   delta = int(10 * acos(bs / d) * 180 / PI);
   alpha = int((1800 - betas) / 2 - gamma - delta);                                                               // alpha (degrees *10)
-  alpha = alpha - 30;                                                                                            // allowance for breaking phase
+  alpha = alpha - 20;                                                                                            // allowance for braking phase
 }
 
 
@@ -240,8 +240,8 @@ void threeStepTurnAngles()
 boolean alignCommand = false;
 boolean alignTrue = false;
 int stopDutyCycle           =   0;   //   0% of 256
-int slowDutyCycle12         =  26;   //  10% of 256
-int slowDutyCycle34         =  26;   //
+int slowDutyCycle12         =  38;   //  15% of 256 minimum for carpeted floor, maximum for turning
+int slowDutyCycle34         =  38;   //
 int halfDutyCycle12         = 100;   //  40% of 256
 int halfDutyCycle34         = 100;   //
 int fullDutyCycle12         = 150;   //  60% of 256
@@ -478,9 +478,9 @@ void MotorControl()
             && (turnedAngle > 0)
            )
        ) {                                                                                          // Target reached
-      digitalWrite(motor3Direction, digitalRead(motor3Direction) ^ 1);                              // breaking phase
+      digitalWrite(motor3Direction, digitalRead(motor3Direction) ^ 1);                              // braking phase
       digitalWrite(motor1Direction, digitalRead(motor1Direction) ^ 1);                              // turn opposite direction
-      delay(70);                                                                                    // ms
+      delay(150);                                                                                   // ms
         
       analogWrite(motor1PWM, stopDutyCycle);                                                        // immediate stop
       analogWrite(motor3PWM, stopDutyCycle);
@@ -521,9 +521,9 @@ void MotorControl()
             && (turnedAngle > 0)
            )
        ) {                                                                                         // Target reached
-      digitalWrite(motor3Direction, digitalRead(motor3Direction) ^ 1);                             // breaking phase
+      digitalWrite(motor3Direction, digitalRead(motor3Direction) ^ 1);                             // braking phase
       digitalWrite(motor1Direction, digitalRead(motor1Direction) ^ 1);                             // turn opposite direction
-      delay(70);                                                                                   // ms
+      delay(150);                                                                                  // ms
         
       analogWrite(motor1PWM, stopDutyCycle);                                                       // immediate stop
       analogWrite(motor3PWM, stopDutyCycle);      
