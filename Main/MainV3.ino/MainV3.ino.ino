@@ -1,7 +1,7 @@
 
 //****************************************************************************************************************************************************
 // *** Arduino robot program V3
-// *** Version: 2016.10.19
+// *** Version: 2016.10.21
 // *** Developer: Wolfgang Glück
 // ***
 // *** Supported hardware:
@@ -37,6 +37,7 @@
 // ***          (Stop, ForwardSlow, ForwardHalf, ForwardFull)
 // ***          (SteeringAhead, SteeringLeft, SteeringRight in combination with Forward Commands)
 // ***          (TurnSlow90Left, TurnSlow90Right, TurnSlow180Left, turnSlowTo value)
+// ***          (Braking if stop or turn command has been finished)
 // ***   - (ok) Get switch on/off command for audio amplifier
 // ***   - (ok) Get reset command for encoder values
 // ***   - (ok) Get status about W-LAN from USB interface
@@ -326,7 +327,12 @@ boolean linearRegression(float Sr[10][6], float value, float a, float b, int cou
 void MotorControl()
 {
   if (emergencyStop || forwardStopCommand) {        // Emergency stop or manually stop
-    analogWrite(motor1PWM, stopDutyCycle);          // *******************************
+                                                    // *******************************
+    digitalWrite(motor3Direction, digitalRead(motor3Direction) ^ 1); // braking phase
+    digitalWrite(motor1Direction, digitalRead(motor1Direction) ^ 1); // turn opposite direction
+    delay(150);                                                      // ms
+                                                    
+    analogWrite(motor1PWM, stopDutyCycle);                           // immediate stop          
     analogWrite(motor3PWM, stopDutyCycle);
     forwardSlowCommand = false;
     forwardHalfCommand = false;
