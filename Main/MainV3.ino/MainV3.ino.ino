@@ -1,7 +1,7 @@
 
 //****************************************************************************************************************************************************
 // *** Arduino robot program V3
-// *** Version: 2016.10.21
+// *** Version: 2016.10.22
 // *** Developer: Wolfgang Glück
 // ***
 // *** Supported hardware:
@@ -71,19 +71,22 @@ void ServoControl(String mode, float WS)
   if (mode == "WSright") {
     if (not SteeringServo.attached()) SteeringServo.attach(ServoPWM, ServoPmin, ServoPmax);
     SteeringServo.writeMicroseconds(int(ServoPmiddle + WS / ServoGradProMicroS));
+    delay(300);
   }
   if (mode == "WSleft") {
     if (not SteeringServo.attached()) SteeringServo.attach(ServoPWM, ServoPmin, ServoPmax);
     SteeringServo.writeMicroseconds(int(ServoPmiddle - WS / ServoGradProMicroS));
+    delay(300);
   }
   if (mode == "WSmiddle") {
     if (not SteeringServo.attached()) SteeringServo.attach(ServoPWM, ServoPmin, ServoPmax);
     SteeringServo.writeMicroseconds(ServoPmiddle);
+    delay(300);
   }
   if (mode == "Detach") {
     if (SteeringServo.attached()) {
       SteeringServo.writeMicroseconds(ServoPmiddle);
-      delay(100);
+      delay(300);
       SteeringServo.detach();
     }
   }
@@ -241,8 +244,8 @@ void threeStepTurnAngles()
 boolean alignCommand = false;
 boolean alignTrue = false;
 int stopDutyCycle           =   0;   //   0% of 256
-int slowDutyCycle12         =  38;   //  15% of 256 minimum for carpeted floor, maximum for turning
-int slowDutyCycle34         =  38;   //
+int slowDutyCycle12         =  51;   //  20% of 256 minimum for carpeted floor, maximum for turning
+int slowDutyCycle34         =  51;   //
 int halfDutyCycle12         = 100;   //  40% of 256
 int halfDutyCycle34         = 100;   //
 int fullDutyCycle12         = 150;   //  60% of 256
