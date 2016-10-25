@@ -1,7 +1,7 @@
 
 //****************************************************************************************************************************************************
 // *** Arduino robot program V3
-// *** Version: 2016.10.22
+// *** Version: 2016.10.25
 // *** Developer: Wolfgang Glück
 // ***
 // *** Supported hardware:
@@ -71,25 +71,26 @@ void ServoControl(String mode, float WS)
   if (mode == "WSright") {
     if (not SteeringServo.attached()) SteeringServo.attach(ServoPWM, ServoPmin, ServoPmax);
     SteeringServo.writeMicroseconds(int(ServoPmiddle + WS / ServoGradProMicroS));
-    delay(300);
+    delay(300); // Wait for servo has been turned
   }
   if (mode == "WSleft") {
     if (not SteeringServo.attached()) SteeringServo.attach(ServoPWM, ServoPmin, ServoPmax);
     SteeringServo.writeMicroseconds(int(ServoPmiddle - WS / ServoGradProMicroS));
-    delay(300);
+    delay(300); // Wait for servo has been turned
   }
   if (mode == "WSmiddle") {
     if (not SteeringServo.attached()) SteeringServo.attach(ServoPWM, ServoPmin, ServoPmax);
     SteeringServo.writeMicroseconds(ServoPmiddle);
-    delay(300);
+    delay(300); // Wait for servo has been turned
   }
   if (mode == "Detach") {
     if (SteeringServo.attached()) {
       SteeringServo.writeMicroseconds(ServoPmiddle);
-      delay(300);
+      delay(300); // Wait for servo has been turned
       SteeringServo.detach();
     }
   }
+  return;
 }
 
 // Compass
@@ -203,6 +204,7 @@ float rS = 18.567;                      // Servo lever length
 float WAR = 26.0;                       // axle journal angle
 float ADM = ADA / 20;                   // distance between axle journal turning point and chassis middle point
 float WI, WA, x, xs, beta, bc, delta = 0.0; // variables for calculaton of WS
+int allowance = 20;                     // allowance for turn brake phase
 boolean forwardStopCommand  = true;     // Stop command
 boolean forwardSlowCommand  = false;    // Forward slow command
 boolean backwardSlowCommand  = false;   // Backward slow command
@@ -232,11 +234,12 @@ void threeStepTurnAngles()
   d = e / sin(atan(e / turningRadius));
   bs = sqrt(2 * pow(d, 2) - 2 * pow(d, 2) * cos(beta * PI / 180)) / 2;                                           // b' (cm)
   betas = int(10 * acos(- ((pow(bs, 2) - 2 * pow(turningRadius, 2)) / (2 * pow(turningRadius, 2)))) * 180 / PI); // beta' (degrees *10)
-  betas = betas - 20;                                                                                            // allowance for braking phase                                                              
+  betas = betas - allowance;                                                                                     // allowance for braking phase                                                              
   gamma = int(10 * atan(e / turningRadius) * 180 / PI);
   delta = int(10 * acos(bs / d) * 180 / PI);
-  alpha = int((1800 - betas) / 2 - gamma - delta);                                                               // alpha (degrees *10)
-  alpha = alpha - 20;                                                                                            // allowance for braking phase
+  alpha = int((1800 - betas - allowance) / 2) - gamma - delta;                                                   // alpha (degrees *10)
+  alpha = alpha - allowance;                                                                                     // allowance for braking phase
+  return;
 }
 
 
@@ -308,7 +311,7 @@ boolean linearRegression(float Sr[10][6], float value, float a, float b, int cou
     xm = xm / 10.0;
     ym = ym / 10.0;
 
-    for (i = 0; i < 10; i ++)                              // calculate table and sums
+    for (i = 0; i < 10; i ++)                             // calculate table and sums
     { Sr[i][2] = Sr[i][0] - xm;                           // dxi
       Sr[i][3] = Sr[i][1] - ym;                           // dyi
       Sr[i][4] = Sr[i][2] * Sr[i][3];                     // dxi * dyi
@@ -388,7 +391,7 @@ void MotorControl()
     steeringDutyCycle34 = slowDutyCycle34 + (slowDutyCycle34 * steeringRate / 100);
     WS = 35.0;
     if (steeringLeftCommand) {
-      analogWrite(motor3PWM, slowDutyCycle34);   // Steering Left
+      analogWrite(motor3PWM, slowDutyCycle34);        // Steering Left
       analogWrite(motor1PWM, steeringDutyCycle12);
       ServoControl("WSleft", WS);
     }
@@ -413,7 +416,7 @@ void MotorControl()
     steeringDutyCycle34 = halfDutyCycle34 + (halfDutyCycle34 * steeringRate / 100);
     WS = 35.0;
     if (steeringLeftCommand) {
-      analogWrite(motor3PWM, halfDutyCycle34);// Steering Left
+      analogWrite(motor3PWM, halfDutyCycle34);        // Steering Left
       analogWrite(motor1PWM, steeringDutyCycle12);
       ServoControl("WSleft", WS);
     }
@@ -424,7 +427,7 @@ void MotorControl()
         ServoControl("WSright", WS);
       }
       else {
-        analogWrite(motor3PWM, halfDutyCycle34);  // Steering ahead
+        analogWrite(motor3PWM, halfDutyCycle34);      // Steering ahead
         analogWrite(motor1PWM, halfDutyCycle12);
         ServoControl("WSmiddle", WS);
       }
@@ -438,7 +441,7 @@ void MotorControl()
     steeringDutyCycle34 = fullDutyCycle34 + (fullDutyCycle34 * steeringRate / 100);
     WS = 35.0;
     if (steeringLeftCommand) {
-      analogWrite(motor3PWM, fullDutyCycle34);// Steering Left
+      analogWrite(motor3PWM, fullDutyCycle34);        // Steering Left
       analogWrite(motor1PWM, steeringDutyCycle12);
       ServoControl("WSleft", WS);
     }
@@ -465,11 +468,11 @@ void MotorControl()
 
     // Output: turnedAngle      angle relative that has been turned
     //         motor stopDutyCycle, turn finished,  
-    //         turnSlowLeftTo command = false, turnSlowLeftBackwardFirstCommand = false, turnSlowLeftForwardFirstCommand = false
-
-    if (((startAngle - angle16) < 0) && ((startAngle - angle16) > -20)) turnedAngle = 0; // Filter measuring faults (-19..-1)
-    else turnedAngle = (3600 + startAngle - angle16) % 3600;                             // calculate turned angle
-
+    //         turnSlowLeftTo command = false
+    
+    turnedAngle = (3600 + startAngle - angle16) % 3600;                             // calculate turned angle
+    if ((turnedAngle < 10) || (turnedAngle > 900)) turnedAngle = 0;                 // Filter measuring faults (-9..+ 9)
+    
     if (((((turnAngle >= 0) && (turnAngle < 1800))                                                    // brown T1, T2
           || ((turnAngle >= 1800) && (turnAngle < 3600) && (startAngle >= 1800) && (startAngle < 3600)) // brown T3, T4
          )
@@ -486,7 +489,8 @@ void MotorControl()
             && (angle16 > startAngle)
             && (turnedAngle > 0)
            )
-       ) {                                                                                          // Target reached
+       ) 
+    {                                                                                               // Target reached
       digitalWrite(motor3Direction, digitalRead(motor3Direction) ^ 1);                              // braking phase
       digitalWrite(motor1Direction, digitalRead(motor1Direction) ^ 1);                              // turn opposite direction
       delay(150);                                                                                   // ms
@@ -509,8 +513,8 @@ void MotorControl()
     //         motor stopDutyCycle, turn finished,
     //         turnslowRightTo command = false
 
-    if (((angle16 - startAngle) < 0) && ((angle16 - startAngle) > -20)) turnedAngle = 0; // Filter measuring faults (-19..-1)
-    else turnedAngle = (3600 + angle16 - startAngle) % 3600;                             // calculate turned angle
+    turnedAngle = (3600 + angle16 - startAngle) % 3600;                             // calculate turned angle
+    if ((turnedAngle < 10) || (turnedAngle > 900)) turnedAngle = 0;                 // Filter measuring faults (-9..+ 9)
 
     if (((((turnAngle >= 1800) && (turnAngle < 3600))                                             // violet T3, T4
           || ((turnAngle >= 0) && (turnAngle < 1800) && (startAngle >= 0) && (startAngle < 1800)) // violet T1, T2
@@ -529,7 +533,8 @@ void MotorControl()
             && (angle16 < startAngle)
             && (turnedAngle > 0)
            )
-       ) {                                                                                         // Target reached
+       ) 
+     {                                                                                             // Target reached
       digitalWrite(motor3Direction, digitalRead(motor3Direction) ^ 1);                             // braking phase
       digitalWrite(motor1Direction, digitalRead(motor1Direction) ^ 1);                             // turn opposite direction
       delay(150);                                                                                  // ms
@@ -538,7 +543,6 @@ void MotorControl()
       analogWrite(motor3PWM, stopDutyCycle);      
       turnSlowRightToCommand = false;
       turnFinished = true;                                                                         // local status
-
     }
   }
   
@@ -553,10 +557,10 @@ void MotorControl()
 
       threeStepTurnAngles();                                                                             // calculating alpha, betas
 
-      originAngle = angle16;                      // origin angle
-      startAngle = angle16;                       // store start angle
-      turnAngleRelative = alpha;                  // relative turn angle
-      turnAngle = (angle16 + alpha) % 3600;       // final angle
+      originAngle = angle16;                      // origin angle for all steps
+      startAngle = angle16;                       // store start angle for this step
+      turnAngleRelative = alpha;                  // relative turn angle for this step
+      turnAngle = (angle16 + alpha) % 3600;       // final angle for this step
 
       digitalWrite(motor3Direction, backward);    // back left alpha
       digitalWrite(motor1Direction, backward);
@@ -602,7 +606,7 @@ void MotorControl()
 
     if (sequenceCounter90 == 5) {                  // 5------------------------------------------------------
       startAngle = angle16;                        // store start angle
-      alpha = (originAngle + 900 - angle16) % 3600;// calculated rest angle
+      alpha = (originAngle + 900 - angle16 - allowance) % 3600;// calculated rest angle
       turnAngleRelative = alpha;                   // relative turn angle
       turnAngle = (angle16 + alpha) % 3600;        // final angle
 
@@ -645,10 +649,10 @@ void MotorControl()
 
       threeStepTurnAngles();                                                                             // calculating alpha, betas
 
-      originAngle = angle16;                      // origin angle
-      startAngle = angle16;                       // store start angle
-      turnAngleRelative = alpha;                  // relative turn angle
-      turnAngle = (3600 + angle16 - alpha) % 3600;// final angle
+      originAngle = angle16;                      // origin angle for all steps
+      startAngle = angle16;                       // store start angle for this step
+      turnAngleRelative = alpha;                  // relative turn angle for this step
+      turnAngle = (3600 + angle16 - alpha) % 3600;// final angle for this step
 
       digitalWrite(motor3Direction, backward);    // back right alpha
       digitalWrite(motor1Direction, backward);
@@ -694,7 +698,7 @@ void MotorControl()
 
     if (sequenceCounter90 == 5) {                  // 5------------------------------------------------------
       startAngle = angle16;                        // store start angle
-      alpha = (3600 + angle16 - (3600 + originAngle - 900)% 3600) % 3600;// calculated rest angle
+      alpha = (3600 + angle16 - allowance - (3600 + originAngle - 900)% 3600) % 3600;// calculated rest angle
       turnAngleRelative = alpha;                   // relative turn angle
       turnAngle = (3600 + angle16 - alpha) % 3600;        // final angle
 
@@ -733,10 +737,10 @@ void MotorControl()
 
       threeStepTurnAngles();                                                                             // calculating alpha, betas
 
-      originAngle = angle16;                      // origin angle
-      startAngle = angle16;                       // store start angle
-      turnAngleRelative = alpha;                  // relative turn angle
-      turnAngle = (3600 + angle16 - alpha) % 3600;// final angle
+      originAngle = angle16;                      // origin angle for all steps
+      startAngle = angle16;                       // store start angle for this step
+      turnAngleRelative = alpha;                  // relative turn angle for this step
+      turnAngle = (3600 + angle16 - alpha) % 3600;// final angle for this step
 
       digitalWrite(motor3Direction, forward);     // forward left alpha
       digitalWrite(motor1Direction, forward);
@@ -782,7 +786,7 @@ void MotorControl()
 
     if (sequenceCounter90 == 5) {                  // 5------------------------------------------------------
       startAngle = angle16;                        // store start angle
-      alpha = (3600 + angle16 - (3600 + originAngle - 900)% 3600) % 3600;// calculated rest angle
+      alpha = (3600 + angle16 - allowance - (3600 + originAngle - 900)% 3600) % 3600;// calculated rest angle
       turnAngleRelative = alpha;                   // relative turn angle
       turnAngle = (3600 + angle16 - alpha) % 3600; // final angle
 
@@ -812,8 +816,8 @@ void MotorControl()
   }
 
   if (turnSlow180LeftCommand) {                    // Turn left 180 degrees sequence (see project documentation)
-                                                   // ***********************************************************
-    if (sequenceCounter180 == 1) {                    // 1----------------------------------------------------------
+                                                   // **********************************************************
+    if (sequenceCounter180 == 1) {                   // 1----------------------------------------------------------
       sequenceCounter90 = 1;
       turnSlow90LeftForwardFirstCommand = true;      // Turn 90 degrees left forward first
 
@@ -823,9 +827,9 @@ void MotorControl()
     if (sequenceCounter180 == 3) {                   // 3----------------------------------------------------------
       if (turnSlow90LeftForwardFirstCommand == false) {
         sequenceCounter90 = 1;
-        turnSlow90LeftBackwardFirstCommand = true;    // Turn 90 degrees left backward first
+        turnSlow90LeftBackwardFirstCommand = true;   // Turn 90 degrees left backward first
 
-        sequenceCounter180 = 4;                       // next step
+        sequenceCounter180 = 4;                      // next step
 
       }
     }
@@ -1004,6 +1008,7 @@ void MotorControl()
       Serial.println(turnFinished);
     }
   }
+  return;
 }
 
 
@@ -1718,9 +1723,6 @@ void loop()
         alignCommand = false;
       }
       if (CommandString.startsWith("Turn slow 180 left")) {
-        startAngle = angle16;                     // store start angle
-        turnAngleRelative = 1790;
-        turnAngle = (3600 + angle16 + 1790) % 3600;
         turnSlow180LeftCommand = true;
 
         turnSlow90LeftBackwardFirstCommand = false; turnSlow90LeftForwardFirstCommand = false; turnSlow90RightCommand = false;
@@ -1782,7 +1784,9 @@ void loop()
         CommandStringS = "";
       }
     }
-    Serial.print("I@Stepcount: ");
+    Serial.print("I@Stepcount180: ");
+    Serial.println(sequenceCounter180);
+    Serial.print("I@Stepcount90: ");
     Serial.println(sequenceCounter90);
     Serial.print("I@beta': ");
     Serial.println(betas);
