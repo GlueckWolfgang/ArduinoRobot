@@ -1,7 +1,7 @@
 
 //****************************************************************************************************************************************************
 // *** Arduino robot program V3
-// *** Version: 2016.10.25
+// *** Version: 2016.10.26
 // *** Developer: Wolfgang Glück
 // ***
 // *** Supported hardware:
@@ -247,12 +247,12 @@ void threeStepTurnAngles()
 boolean alignCommand = false;
 boolean alignTrue = false;
 int stopDutyCycle           =   0;   //   0% of 256
-int slowDutyCycle12         =  51;   //  20% of 256 minimum for carpeted floor, maximum for turning
-int slowDutyCycle34         =  51;   //
+int slowDutyCycle12         =  51;   //  20% of 256 minimum for carpeted floor, maximum for turning is 2.2 V 
+int slowDutyCycle34         =  51;   //  (both values will be calculated dynamicly depending on 12V battery voltage level)
 int halfDutyCycle12         = 100;   //  40% of 256
-int halfDutyCycle34         = 100;   //
+int halfDutyCycle34         = 100;   //  (both values will be calculated dynamicly depending on 12V battery voltage level)
 int fullDutyCycle12         = 150;   //  60% of 256
-int fullDutyCycle34         = 150;   //
+int fullDutyCycle34         = 150;   //  (both values will be calculated dynamicly depending on 12V battery voltage level)
 int steeringRate            = 20;    //    % of DutyCycle
 int steeringDutyCycle12     = 0;     // Calculated dutyCycle
 int steeringDutyCycle34     = 0;     // Calculated dutyCycle
@@ -493,7 +493,7 @@ void MotorControl()
     {                                                                                               // Target reached
       digitalWrite(motor3Direction, digitalRead(motor3Direction) ^ 1);                              // braking phase
       digitalWrite(motor1Direction, digitalRead(motor1Direction) ^ 1);                              // turn opposite direction
-      delay(150);                                                                                   // ms
+      delay(170);                                                                                   // ms
         
       analogWrite(motor1PWM, stopDutyCycle);                                                        // immediate stop
       analogWrite(motor3PWM, stopDutyCycle);
@@ -537,7 +537,7 @@ void MotorControl()
      {                                                                                             // Target reached
       digitalWrite(motor3Direction, digitalRead(motor3Direction) ^ 1);                             // braking phase
       digitalWrite(motor1Direction, digitalRead(motor1Direction) ^ 1);                             // turn opposite direction
-      delay(150);                                                                                  // ms
+      delay(170);                                                                                  // ms
         
       analogWrite(motor1PWM, stopDutyCycle);                                                       // immediate stop
       analogWrite(motor3PWM, stopDutyCycle);      
@@ -1290,7 +1290,6 @@ void loop()
   angle16 = high_byte;                       // Calculate 16 bit angle
   angle16 <<= 8;
   angle16 += low_byte;
-  if ((angle16 >= 3595) || (angle16 <= 5)) angle16 = 0;               // Hysteresis +- 0.5 degree arount 0 degrees
   //****************************************************************************************************************
 
   if (turnFinished == true) {
@@ -1496,7 +1495,13 @@ void loop()
 
   // Motor control
   // *************************************************************************************************************************************
-
+  slowDutyCycle12 = int(256*0.2*11.1/battery12VFinalValue);               // Voltage compensation
+  slowDutyCycle34 = int(256*0.2*11.1/battery12VFinalValue);               // Voltage compensation
+  halfDutyCycle12 = int(256*0.4*11.1/battery12VFinalValue);               // Voltage compensation
+  halfDutyCycle34 = int(256*0.4*11.1/battery12VFinalValue);               // Voltage compensation
+  fullDutyCycle12 = int(256*0.6*11.1/battery12VFinalValue);               // Voltage compensation
+  fullDutyCycle34 = int(256*0.6*11.1/battery12VFinalValue);               // Voltage compensation
+  
   MotorControl();
   if (forwardStopCommand == true) {
     WS = 0.0;
