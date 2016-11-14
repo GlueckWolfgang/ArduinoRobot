@@ -1,7 +1,7 @@
 
 //****************************************************************************************************************************************************
 // *** Arduino robot program V3
-// *** Version: 2016.10.26
+// *** Version: 2016.11.14
 // *** Developer: Wolfgang Glück
 // ***
 // *** Supported hardware:
@@ -37,8 +37,7 @@
 // ***          (Stop, ForwardSlow, ForwardHalf, ForwardFull)
 // ***          (SteeringAhead, SteeringLeft, SteeringRight in combination with Forward Commands)
 // ***          (TurnSlow90Left, TurnSlow90Right, TurnSlow180Left, turnSlowTo value)
-// ***          (Braking if stop or turn command has been finished)
-// ***   - (ok) Get switch on/off command for audio amplifier
+// ***          (Braking at the end of a drive- or turn command)
 // ***   - (ok) Get reset command for encoder values
 // ***   - (ok) Get status about W-LAN from USB interface
 // ***   - (ok) Get switch command on/off for audio amplifier
@@ -195,6 +194,8 @@ int i = 0;
 int targetAngle = 0;                    // turn to target angle
 float turningRadius = 0.0;              // Turning radius set dynamicly
 float turningRadiusMin = 43.2;          // Turning radius minimal
+float turningRadiusF = 0.0;
+float turningRadiusB = 0.0;
 float AHV = 19.5;                       // Axle distance back front
 float e = AHV / 2;                      // Distance back axle to axle center point
 float ADA =  189.6;                     // distance between axle journal turning points
@@ -204,7 +205,7 @@ float rS = 18.567;                      // Servo lever length
 float WAR = 26.0;                       // axle journal angle
 float ADM = ADA / 20;                   // distance between axle journal turning point and chassis middle point
 float WI, WA, x, xs, beta, bc, delta = 0.0; // variables for calculaton of WS
-int allowance = 20;                     // allowance for turn brake phase
+int allowance = 20;                     // allowance 2 degrees for turn brake phase
 boolean forwardStopCommand  = true;     // Stop command
 boolean forwardSlowCommand  = false;    // Forward slow command
 boolean backwardSlowCommand  = false;   // Backward slow command
@@ -226,7 +227,7 @@ void threeStepTurnAngles()
 { //input:  global
   //        e                 distance back axle to axle center
   //        turningRadius     turning radius
-  //        beta              robot deviation angle
+  //        beta              robot deviation angle in degrees
   //output: global
   //        betas             wide turn angle
   //        alpha             small turn angle
@@ -548,6 +549,7 @@ void MotorControl()
   
   if (turnSlow90RightCommand) {                   // Turn right 90 degrees sequence backward first (see project documentation)
                                                   // *************************************************************************
+                                                  // used for manually command; turn to absolute angle
 
     if (sequenceCounter90 == 1) {                 // 1------------------------------------------------------------------------
       steeringDutyCycle12 = slowDutyCycle12 + (slowDutyCycle12 * steeringRate / 100);
@@ -631,8 +633,11 @@ void MotorControl()
         WS = 0.0;
         ServoControl("WSmiddle", WS);              // Servo middle
 
-        Serial.print("S@Turn finished: ");         // remote status after full 90 degrees only
-        Serial.println(turnFinished);
+        if (not turnSlow180LeftCommand && not turnSlowToCommand) {
+          forwardStopCommand = true;               // Stop for 90 degrees manually
+          Serial.print("S@Turn finished: ");       // remote status
+          Serial.println(turnFinished);
+        }
 
       }
     }
@@ -640,6 +645,8 @@ void MotorControl()
 
   if (turnSlow90LeftBackwardFirstCommand) {       // Turn left 90 degrees sequence backward first (see project documentation)
                                                   // ************************************************************************
+                                                  // used for manually command; turn left 180 degrees 
+                                                  
     if (sequenceCounter90 == 1) {                 // 1
 
       steeringDutyCycle12 = slowDutyCycle12 + (slowDutyCycle12 * steeringRate / 100);
@@ -722,12 +729,19 @@ void MotorControl()
         sequenceCounter90 = 0;
         WS = 0.0;
         ServoControl("WSmiddle", WS);             // Servo middle
+        if (not turnSlow180LeftCommand && not turnSlowToCommand) {
+          forwardStopCommand = true;              // Stop for 90 degrees manually 
+          Serial.print("S@Turn finished: ");      // remote status
+          Serial.println(turnFinished);
+        }
       }
     }
   }
 
   if (turnSlow90LeftForwardFirstCommand) {        // Turn left 90 degrees sequence forward first (see project documentation)
                                                   // ***********************************************************************
+                                                  // used for turn left 180 degrees; Turn to absolute angle
+                                                  
     if (sequenceCounter90 == 1) {                 // 1
 
       steeringDutyCycle12 = slowDutyCycle12 + (slowDutyCycle12 * steeringRate / 100);
@@ -810,6 +824,7 @@ void MotorControl()
         sequenceCounter90 = 0;
         WS = 0.0;
         ServoControl("WSmiddle", WS);              // Servo middle
+        if (not turnSlow180LeftCommand && not turnSlowToCommand) forwardStopCommand = true;
       }
 
     }
@@ -821,22 +836,24 @@ void MotorControl()
       sequenceCounter90 = 1;
       turnSlow90LeftForwardFirstCommand = true;      // Turn 90 degrees left forward first
 
-      sequenceCounter180 = 3;                        // next step
+      sequenceCounter180 = 2;                        // next step
     }
 
-    if (sequenceCounter180 == 3) {                   // 3----------------------------------------------------------
+    if (sequenceCounter180 == 2) {                   // 2----------------------------------------------------------
       if (turnSlow90LeftForwardFirstCommand == false) {
         sequenceCounter90 = 1;
         turnSlow90LeftBackwardFirstCommand = true;   // Turn 90 degrees left backward first
 
-        sequenceCounter180 = 4;                      // next step
+        sequenceCounter180 = 3;                      // next step
 
       }
     }
-    if (sequenceCounter180 == 4) {                   // 4----------------------------------------------------------
+    if (sequenceCounter180 == 3) {                   // 3----------------------------------------------------------
       if (turnSlow90LeftBackwardFirstCommand == false) {
         turnSlow180LeftCommand = false;
-
+        forwardStopCommand = true;                   // Stop for 180 degrees manually 
+        Serial.print("S@Turn finished: ");           // remote status
+        Serial.println(turnFinished);
         sequenceCounter180 = 0;
       }
     }
@@ -845,9 +862,9 @@ void MotorControl()
   if (turnSlowToCommand) {                         // Turn to absolute angle sequence (see project documentation)
                                                    // ***********************************************************
     // construction area!
-    if (sequenceCounterTo == 1) {                   // 1----------------------------------------------------------
+    if (sequenceCounterTo == 1) {                  // 1----------------------------------------------------------
       turnFinished = false;
-      Serial.print("S@Turn finished: ");              // remote status for turn finished to false
+      Serial.print("S@Turn finished: ");           // remote status for turn finished to false
       Serial.println(turnFinished);
       steeringDutyCycle12 = slowDutyCycle12 + (slowDutyCycle12 * steeringRate / 100);
       steeringDutyCycle34 = slowDutyCycle34 + (slowDutyCycle34 * steeringRate / 100);
@@ -855,80 +872,105 @@ void MotorControl()
       startAngle = angle16;                                                         // store start angle
       targetAngle = turnAngle;                                                      // store target angle
       i = (targetAngle - angle16);                                                  // relative angle -3600 .. 0 .. + 3600 degrees
-      // turn angle relative -1.5 .. -1749 turn left; +1.5 .. +1850 turn right
+      // turn angle relative -1.. -1749 turn left; +1.. +1850 turn right
       // *********************************************************************
-      turnAngleRelative = i;                                                        // - 1.5   .. - 1749 --> turn left; +1.5 .. +1850 --> turn right
+      turnAngleRelative = i;                                                        // - 1 .. - 1749 --> turn left; +1 .. +1850 --> turn right
       if (i <= -1750) turnAngleRelative = i + 3600;                                 // -1750 .. - 3600 --> turn angle relative right = + 1850 .. 0
       if (i > 1850) turnAngleRelative = i - 3600;                                   // +1851 .. + 3600 --> turn angle relative left  = - 1749 .. 0
       i = turnAngleRelative;                                                        // save turn angle relative
 
-      if (i < -15 || i > 15) {                                                      // do nothing in range (-1.4 .. +1.4) degrees
+      if ((i < -9) || (i > 9)) {                                                    // do nothing in range (-0.9 .. +0.9) degrees
 
-        if (i > 0) {                                                                // turn right to
-          // *************
+        if (i > 0) {                                                                
+                                                                                    // *************
           if (  i > 1000) {                                                         // turn first 90 degrees right
             sequenceCounterTo = 2;
           }
           else {
-            sequenceCounterTo = 3;
+            sequenceCounterTo = 3;                                                  // turn right to
           }
         }
-        else {                                                                      // turn left to
-          // ************
+        else {                                                                      
+                                                                                    // ************
           if (i < 1000) {                                                           // turn first 90 degrees left
             sequenceCounterTo = 20;
           }
           else {
-            sequenceCounterTo = 21;
+            sequenceCounterTo = 21;                                                 // turn left to
           }
         }
       }
       else {
-        turnFinished = true;                                                        // dead zone +- 1.4 degrees
-        sequenceCounterTo = 30;                                                     // end of turnto
+        turnFinished = true;                                                        // dead zone +- 0.9 degrees
+        sequenceCounterTo = 100;                                                    // end of turnto
       }
     }
+    
     if (sequenceCounterTo == 2) {                  // 2----------------------------------------------------------
 
       sequenceCounter90 = 1;
-      turnSlow90RightCommand = true;                // Turn 90 degrees right
+      turnSlow90RightCommand = true;               // Turn 90 degrees right
       sequenceCounterTo = 3;
     }
 
     if (sequenceCounterTo == 3) {                  // 3----------------------------------------------------------
       if (turnSlow90RightCommand == false) {
+                                                   // Check if 3 or 2 step algorithm is required for turning right
+        beta = ((3600 +targetAngle - angle16) % 3600)/10; // robot deviation relative
+        if (beta > 70){                            // RA > 70 degrees; 3step r = 43.2cm
+          turningRadius = turningRadiusMin;
+          threeStepTurnAngles();                   // calculating alpha, betas        
+        
+        }
+        if ((beta > 35) && (beta <= 70)){          // RA > 35 <= 70 degrees; 3 step r = 200cm
+          turningRadius = 200;
+          threeStepTurnAngles();                   // calculating alpha, betas        
+        }
 
-        beta = abs(i);                              // Robot deviation from target (degrees)
-        turningRadius = turningRadiusMin;
+        if ((beta > 10) && (beta <= 35)){          // RA > 10 <= 35 degrees; 2 step r calculated     
+          alpha = ((180-beta)/2)/2;
+          betas =  90-alpha;   
+          turningRadiusF = (2*e/cos(betas*PI/180))/(2*sin((beta/4)*PI/180));
+          turningRadiusB = turningRadiusF;
+          betas = beta*10/2 - allowance;
+          alpha = betas;
+          sequenceCounterTo = 30;                  // continue with 2 step algorithm turning right
+        }
 
-        threeStepTurnAngles();                                                                             // calculating alpha, betas
+        if (beta <= 10){                           // RA      <= 10 degrees; 2 step  r calculated       
+          turningRadiusF = sqrt(AHV*AHV/(2-2*cos((22.3-beta)*PI/180)));
+          turningRadiusB = 50;
+          betas = 223 - allowance;
+          alpha = betas - int(beta * 10);
+          sequenceCounterTo = 30;                  // continue with 2 step algorithm turning right
+        }
+                                                       
+                                                   // continue with 3 step algorithm turning right
+        originAngle = angle16;                     // origin angle
+        startAngle = angle16;                      // store start angle
+        turnAngleRelative = alpha;                 // relative turn angle
+        turnAngle = (angle16 + alpha) % 3600;      // final angle
 
-        originAngle = angle16;                      // origin angle
-        startAngle = angle16;                       // store start angle
-        turnAngleRelative = alpha;                  // relative turn angle
-        turnAngle = (angle16 + alpha) % 3600;       // final angle
-
-        digitalWrite(motor3Direction, backward);    // back left alpha
+        digitalWrite(motor3Direction, backward);   // back left alpha
         digitalWrite(motor1Direction, backward);
         WS = 35.0;
-        ServoControl("WSleft", WS);;                // Servo left
+        ServoControl("WSleft", WS);;               // Servo left
 
         analogWrite(motor1PWM, steeringDutyCycle12);// run
         analogWrite(motor3PWM, slowDutyCycle34);
 
         turnFinished = false;
-        turnSlowRightToCommand = true;              // supervise turn until turn finished
+        turnSlowRightToCommand = true;             // supervise turn until turn finished
 
-        sequenceCounterTo = 4;                      // next step
+        sequenceCounterTo = 4;                     // next step
       }
     }
 
     if (sequenceCounterTo == 4) {                  // 4----------------------------------------------------------
-      if (turnFinished) sequenceCounterTo = 5;      // wait for turn
+      if (turnFinished) sequenceCounterTo = 5;     // wait for turn
     }
 
-    if (sequenceCounterTo == 5) {                  // 5----------------------------------------------------------
-
+    if (sequenceCounterTo == 5) {                  // 5----------------------------------------------------------                                                   
       startAngle = angle16;                        // store start angle
       turnAngleRelative = betas;                   // relative turn angle
       turnAngle = (angle16 + betas) % 3600;        // final angle
@@ -947,12 +989,12 @@ void MotorControl()
     }
 
     if (sequenceCounterTo == 6) {                  // 6----------------------------------------------------------
-      if (turnFinished) sequenceCounterTo = 7;      // wait for turn
+      if (turnFinished) sequenceCounterTo = 7;     // wait for turn
     }
 
     if (sequenceCounterTo == 7) {                  // 7----------------------------------------------------------
       startAngle = angle16;                        // store start angle
-      alpha = (targetAngle - angle16) % 3600;      // calculated rest angle
+      alpha = (3600 + targetAngle - angle16 - allowance) % 3600;// calculated rest angle
       turnAngleRelative = alpha;                   // relative turn angle
       turnAngle = (angle16 + alpha) % 3600;        // final angle
 
@@ -970,7 +1012,7 @@ void MotorControl()
     }
 
     if (sequenceCounterTo == 8) {                  // 8----------------------------------------------------------
-      if (turnFinished) sequenceCounterTo = 30;     // wait for turn
+      if (turnFinished) sequenceCounterTo = 100;   // wait for turn
     }
 
 
@@ -978,27 +1020,67 @@ void MotorControl()
     if (sequenceCounterTo == 20) {                 // 20----------------------------------------------------------
 
       sequenceCounter90 = 1;
-      turnSlow90LeftForwardFirstCommand = true;     // Turn 90 degrees left forward first
+      turnSlow90LeftForwardFirstCommand = true;    // Turn 90 degrees left forward first
+      sequenceCounterTo = 21;                      // next step
 
 
     }
-
+    
     if (sequenceCounterTo == 21) {                 // 21----------------------------------------------------------
-      // turn to rest angle left
+      if (turnSlow90LeftForwardFirstCommand = false) { // wait for turn    
+           
+                                                   // Check if 3 or 2 step algorithm is necessary for turning left
+      beta = (3600 +targetAngle - angle16) % 3600; // robot deviation relative
+
+      
+
+
+
+
+                                                   // continue with 3 step algorithm
+      }
+    }
+
+
+
+    
+
+    if (sequenceCounterTo == 22) {                 // 22----------------------------------------------------------
+                                                   
+
+
+
+
+                                                   // continue with 3 step algorithm
+
       turnAngleRelative = abs(turnAngleRelative);
-      turnAngle = (3600 + targetAngle + 10) % 3600; // cycle tolerance
-      turnAngleRelative = (3600 + turnAngleRelative - 10) % 3600;
+      turnAngle = (3600 + targetAngle) % 3600; 
+      turnAngleRelative = (3600 + turnAngleRelative) % 3600;
       turnSlowLeftToCommand = true;
 
 
     }
 
-    if (sequenceCounterTo == 22) {                 // 22----------------------------------------------------------
-      // wait for turn
-
+    if (sequenceCounterTo == 23) {                 // 23----------------------------------------------------------
+      
     }
 
+
+
+
     if (sequenceCounterTo == 30) {                 // 30----------------------------------------------------------
+     
+    }
+
+
+    if (sequenceCounterTo == 40) {                 // 40----------------------------------------------------------
+      
+    }
+
+
+    
+
+    if (sequenceCounterTo == 100) {                // 100----------------------------------------------------------
 
       turnSlowToCommand = false;
       sequenceCounterTo == 0;
