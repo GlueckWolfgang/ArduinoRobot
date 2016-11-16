@@ -1,7 +1,7 @@
 
 //****************************************************************************************************************************************************
 // *** Arduino robot program V3
-// *** Version: 2016.11.15
+// *** Version: 2016.11.16
 // *** Developer: Wolfgang Glück
 // ***
 // *** Supported hardware:
@@ -924,11 +924,13 @@ void MotorControl()
         beta = ((3600 + targetAngle - angle16) % 3600)/10; // robot deviation relative
         if (beta > 70){                            // RA > 70 degrees; 3step r = 43.2cm
           turningRadius = turningRadiusMin;
+          WS = 35.0;
           threeStepTurnAngles();                   // calculating alpha, betas        
         
         }
         if ((beta > 35) && (beta <= 70)){          // RA > 35 <= 70 degrees; 3 step r = 200cm
           turningRadius = 200;
+          WS = 7.7;
           threeStepTurnAngles();                   // calculating alpha, betas        
         }
 
@@ -958,7 +960,6 @@ void MotorControl()
 
         digitalWrite(motor3Direction, backward);   // back left alpha
         digitalWrite(motor1Direction, backward);
-        WS = 35.0;
         ServoControl("WSleft", WS);;               // Servo left
 
         analogWrite(motor1PWM, steeringDutyCycle12);// run
@@ -982,7 +983,6 @@ void MotorControl()
 
       digitalWrite(motor3Direction, forward);      // forward right beta'
       digitalWrite(motor1Direction, forward);
-      WS = 35.0;
       ServoControl("WSright", WS);                 // Servo right
 
       analogWrite(motor1PWM, slowDutyCycle12);     // run
@@ -1005,7 +1005,6 @@ void MotorControl()
 
       digitalWrite(motor3Direction, backward);     // back left alpha
       digitalWrite(motor1Direction, backward);
-      WS = 35.0;
       ServoControl("WSleft", WS);                  // Servo left
 
       analogWrite(motor1PWM, steeringDutyCycle12); // run
@@ -1039,11 +1038,13 @@ void MotorControl()
 
         if (beta > 70){                              // RA > 70 degrees; 3step r = 43.2cm
           turningRadius = turningRadiusMin;
+          WS = 35.0;
           threeStepTurnAngles();                     // calculating alpha, betas        
       
         }
         if ((beta > 35) && (beta <= 70)){            // RA > 35 <= 70 degrees; 3 step r = 200cm
         turningRadius = 200.0;
+        WS = 7.7;
         threeStepTurnAngles();                       // calculating alpha, betas        
         }
 
@@ -1075,8 +1076,7 @@ void MotorControl()
       
         digitalWrite(motor3Direction, backward);   // back right alpha
         digitalWrite(motor1Direction, backward);
-        WS = 35.0;
-        ServoControl("WSright", WS);;              // Servo right
+        ServoControl("WSright", WS);              // Servo right
 
         analogWrite(motor1PWM, slowDutyCycle12);   // run
         analogWrite(motor3PWM, steeringDutyCycle34);
@@ -1100,7 +1100,6 @@ void MotorControl()
 
       digitalWrite(motor3Direction, forward);      // forward left beta'
       digitalWrite(motor1Direction, forward);
-      WS = 35.0;
       ServoControl("WSleft", WS);                  // Servo right
 
       analogWrite(motor1PWM, steeringDutyCycle12); // run
@@ -1122,7 +1121,6 @@ void MotorControl()
 
       digitalWrite(motor3Direction, backward);     // back right alpha
       digitalWrite(motor1Direction, backward);
-      WS = 35.0;
       ServoControl("WSright", WS);                 // Servo right
 
       analogWrite(motor1PWM, slowDutyCycle12); // run
@@ -1158,6 +1156,7 @@ void MotorControl()
       ServoControl("WSmiddle", WS);                // Servo middle
       Serial.print("S@Turn finished: ");           // remote status after automatic turn only
       Serial.println(turnFinished);
+      forwardStopCommand = true;
     }
   }
   return;
@@ -1952,8 +1951,8 @@ void loop()
     Serial.println(betas);
     Serial.print("I@alpha: ");
     Serial.println(alpha);
-    Serial.print("I@i: ");
-    Serial.println(i);
+    Serial.print("I@WS: ");
+    Serial.println(int(WS*10));
 
 
   }
