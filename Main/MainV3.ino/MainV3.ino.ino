@@ -1,7 +1,7 @@
 
 //****************************************************************************************************************************************************
 // *** Arduino robot program V3
-// *** Version: 2016.11.16
+// *** Version: 2016.12.29
 // *** Developer: Wolfgang Glück
 // ***
 // *** Supported hardware:
@@ -36,8 +36,8 @@
 // ***   - (ok) Get and execute driving commands via USB interface (transition beween driving commands directly is allowed)
 // ***          (Stop, ForwardSlow, ForwardHalf, ForwardFull)
 // ***          (SteeringAhead, SteeringLeft, SteeringRight in combination with Forward Commands)
-// ***          (TurnSlow90Left, TurnSlow90Right, TurnSlow180Left, turnSlowTo value)
-// ***          (Braking at the end of a drive- or turn command)
+// ***          (TurnSlow90Left, TurnSlow90Right, TurnSlow180Left, TurnSlowTo)
+// ***          (Carpet ground; Drive ahead; Drive circle)
 // ***   - (ok) Get reset command for encoder values
 // ***   - (ok) Get status about W-LAN from USB interface
 // ***   - (ok) Get switch command on/off for audio amplifier
@@ -55,14 +55,20 @@
 #include <Servo.h>
 
 // Servo
-// *************************************************************************************************************************
+// *****************************************************************************************
 Servo SteeringServo;
 #define ServoPWM 7
-#define ServoPmin 470
-#define ServoPmax 2400
-#define ServoPmiddle 1435
-#define ServoGradProMicroS 0.093262
+
+// depends on used servo type; tetected by trial and error
+float ServoPmin = 470;
+float ServoPmax = 2400;
+#define ServoDelay 300
+
+// theoretical value 1435; adjusted to servo middle position (1460) and straightforward drive (1472)
+#define ServoPmiddle 1472
+
 String mode = "WSmiddle";
+float ServoGradProMicroS = 180 / (ServoPmax - ServoPmin);
 float WS = 0.0;
 
 void ServoControl(String mode, float WS)
@@ -70,22 +76,22 @@ void ServoControl(String mode, float WS)
   if (mode == "WSright") {
     if (not SteeringServo.attached()) SteeringServo.attach(ServoPWM, ServoPmin, ServoPmax);
     SteeringServo.writeMicroseconds(int(ServoPmiddle + WS / ServoGradProMicroS));
-    delay(300); // Wait for servo has been turned
+    delay(ServoDelay); // Wait for servo has been turned
   }
   if (mode == "WSleft") {
     if (not SteeringServo.attached()) SteeringServo.attach(ServoPWM, ServoPmin, ServoPmax);
     SteeringServo.writeMicroseconds(int(ServoPmiddle - WS / ServoGradProMicroS));
-    delay(300); // Wait for servo has been turned
+    delay(ServoDelay); // Wait for servo has been turned
   }
   if (mode == "WSmiddle") {
     if (not SteeringServo.attached()) SteeringServo.attach(ServoPWM, ServoPmin, ServoPmax);
     SteeringServo.writeMicroseconds(ServoPmiddle);
-    delay(300); // Wait for servo has been turned
+    delay(ServoDelay); // Wait for servo has been turned
   }
   if (mode == "Detach") {
     if (SteeringServo.attached()) {
       SteeringServo.writeMicroseconds(ServoPmiddle);
-      delay(300); // Wait for servo has been turned
+      delay(ServoDelay); // Wait for servo has been turned
       SteeringServo.detach();
     }
   }
@@ -101,6 +107,10 @@ void ServoControl(String mode, float WS)
 #define CMPS11_Byte3 0xF7    // command for calibration
 #define CMPS11_Byte4 0xF8    // command for calibration mode off
 #define ANGLE_8  1           // Register to read from
+#define UpitchLimit 30        // + - limit in degrees
+#define LpitchLimit -30
+#define UrollLimit 20         // + - limit in degrees
+#define LrollLimit -20
 unsigned char high_byte, low_byte, angle8;
 char pitch, roll;
 int angle16;
@@ -111,11 +121,6 @@ float vectora2 = 0.0;
 float vectorLength = 0.0;
 float cosinus = 0.0;
 float angle = 0.0;
-
-#define UpitchLimit 30        // + - limit in degrees
-#define LpitchLimit -30
-#define UrollLimit 20         // + - limit in degrees
-#define LrollLimit -20
 boolean UpitchLimitExceeded = false;
 boolean LpitchLimitExceeded = false;
 boolean UrollLimitExceeded = false;
@@ -127,8 +132,8 @@ boolean LrollLimitExceeded = false;
 
 // Communication
 // *************************************************************************************************************************
-boolean wlanDisturbance = false;  // if WLAN is not ready for more than 3 cycles
 int wlanReadyCount = 0;
+boolean wlanDisturbance = false;  // if WLAN is not ready for more than 3 cycles
 boolean wlanReady = false;        // will be set by command from USB interface and reset by Arduino
 boolean usbDisturbance = false;   // if USB interface is not ready
 
@@ -177,9 +182,6 @@ boolean motor3Stall = false;
 
 // Motor control
 // *******************************************************************************************************************************
-boolean emergencyStop = false;
-boolean forward             = 0;
-boolean backward            = 1;
 int originAngle = 0;
 int startAngle = 0;
 int turnedAngle = 0;
@@ -188,10 +190,17 @@ int turnAngleRelative = 0;              // relative angle to be turned
 int sequenceCounter90 = 0;              // Sequence counter for  90 degrees
 int sequenceCounter180 = 0;             // Sequence counter for 180 degrees
 int sequenceCounterTo = 0;              // Sequence counter for turn to
+int sequenceCounterCircle = 0;          // Sequence counter for circle drive
 int alpha = 0;                          // small angle step to turn
 int betas = 0;                          // wide angle step to turn
 int i = 0;
 int targetAngle = 0;                    // turn to target angle
+int allowance = 20;                     // allowance for turn brake phase
+int allowanceCarpet = 10;
+int allowancePlain  = 20;
+int breakPulse = 170;                   // puls length for breaking phase
+int breakPulseCarpet = 170;
+int breakPulsePlain = 170;
 float turningRadius = 0.0;              // Turning radius set dynamicly
 float turningRadiusMin = 43.2;          // Turning radius minimal
 float turningRadiusF = 0.0;
@@ -205,12 +214,15 @@ float rS = 18.567;                      // Servo lever length
 float WAR = 26.0;                       // axle journal angle
 float ADM = ADA / 20;                   // distance between axle journal turning point and chassis middle point
 float WI, WA, x, xs, beta, bc, delta = 0.0; // variables for calculaton of WS
-int allowance = 20;                     // allowance 2 degrees for turn brake phase
+boolean emergencyStop = false;
+boolean forward             = 0;
+boolean backward            = 1;
 boolean forwardStopCommand  = true;     // Stop command
 boolean forwardSlowCommand  = false;    // Forward slow command
 boolean backwardSlowCommand  = false;   // Backward slow command
 boolean forwardHalfCommand  = false;    // Forward half command
 boolean forwardFullCommand  = false;    // Forward full command
+boolean driveCircleCommand = false;     // Forward circle command
 boolean steeringLeftCommand = false;    // Steering left hand
 boolean steeringRightCommand = false;   // Steering right hand
 boolean turnSlow180LeftCommand = false; // Turn slow 180 degrees left
@@ -221,7 +233,66 @@ boolean turnSlowToCommand = false;      // Turn to an absolute angle
 boolean turnSlowLeftToCommand = false;  // Turn left to an absolute angle
 boolean turnSlowRightToCommand = false; // Turn left to an absolute angle
 boolean turnFinished = true;
+boolean carpetGround  = true;           // Carpet (true) or plain ground (false)
 
+int stopDutyCycle           =   0;   //   0% of 256
+int slowDutyCycle12         =  77;   //  30% of 256 minimum for carpeted floor, maximum for turning is 2.2 V 
+int slowDutyCycle34         =  77;   //  (both values will be calculated dynamicly depending on 12V battery voltage level)
+float slowDutyCycleCarpet     =  0.3;
+float slowDutyCyclePlain      =  0.2;   //  20% of 256
+int halfDutyCycle12         = 100;   //  40% of 256
+int halfDutyCycle34         = 100;   //  (both values will be calculated dynamicly depending on 12V battery voltage level)
+float halfDutyCycleCarpet     = 0.4; 
+float halfDutyCyclePlain      = 0.35;   //  35% of 256
+int fullDutyCycle12         = 150;   //  60% of 256
+int fullDutyCycle34         = 150;   //  (both values will be calculated dynamicly depending on 12V battery voltage level)
+float fullDutyCycleCarpet     = 0.6; 
+float fullDutyCyclePlain      = 0.4;   //  40% of 256 
+int steeringDutyCycle12     = 0;     // Calculated dutyCycle
+int steeringDutyCycle34     = 0;     // Calculated dutyCycle
+
+// Set drive parameters
+void setDriveParameters()
+{
+  // input: global
+  //        carpetGround
+  //        DutyCycleCarpet
+  //        DutyCyclePlain
+  //        TurningRadius
+  //        
+  // output:global
+  //        DutyCycle12
+  //        DutyCycle34
+  //        steeringDutyCycle12
+  //        steeringDutyCycle34
+  //        breakPulse
+  //        allowance
+  if (carpetGround){
+    // Carpet ground
+    slowDutyCycle12 = int(256*slowDutyCycleCarpet*11.1/battery12VFinalValue);               // Voltage compensation
+    slowDutyCycle34 = int(256*slowDutyCycleCarpet*11.1/battery12VFinalValue);               // Voltage compensation
+    halfDutyCycle12 = int(256*halfDutyCycleCarpet*11.1/battery12VFinalValue);               // Voltage compensation
+    halfDutyCycle34 = int(256*halfDutyCycleCarpet*11.1/battery12VFinalValue);               // Voltage compensation
+    fullDutyCycle12 = int(256*fullDutyCycleCarpet*11.1/battery12VFinalValue);               // Voltage compensation
+    fullDutyCycle34 = int(256*fullDutyCycleCarpet*11.1/battery12VFinalValue);               // Voltage compensation
+    breakPulse = breakPulseCarpet;
+    allowance = allowanceCarpet;
+  }
+  
+  else {
+    // Plain ground
+    slowDutyCycle12 = int(256*slowDutyCyclePlain*11.1/battery12VFinalValue);               // Voltage compensation
+    slowDutyCycle34 = int(256*slowDutyCyclePlain*11.1/battery12VFinalValue);               // Voltage compensation
+    halfDutyCycle12 = int(256*halfDutyCyclePlain*11.1/battery12VFinalValue);               // Voltage compensation
+    halfDutyCycle34 = int(256*halfDutyCyclePlain*11.1/battery12VFinalValue);               // Voltage compensation
+    fullDutyCycle12 = int(256*fullDutyCyclePlain*11.1/battery12VFinalValue);               // Voltage compensation
+    fullDutyCycle34 = int(256*fullDutyCyclePlain*11.1/battery12VFinalValue);               // Voltage compensation
+    breakPulse = breakPulsePlain;
+    allowance = allowancePlain;    
+  }
+  steeringDutyCycle12 = int(slowDutyCycle12 *(turningRadius+11.8/turningRadius-11.8));
+  steeringDutyCycle34 = int(slowDutyCycle34 *(turningRadius+11.8/turningRadius-11.8));
+}
 // Calculating turn angles for 3 step turn
 void threeStepTurnAngles()
 { //input:  global
@@ -247,17 +318,6 @@ void threeStepTurnAngles()
 // align command
 boolean alignCommand = false;
 boolean alignTrue = false;
-int stopDutyCycle           =   0;   //   0% of 256
-int slowDutyCycle12         =  51;   //  20% of 256 minimum for carpeted floor, maximum for turning is 2.2 V 
-int slowDutyCycle34         =  51;   //  (both values will be calculated dynamicly depending on 12V battery voltage level)
-int halfDutyCycle12         = 100;   //  40% of 256
-int halfDutyCycle34         = 100;   //  (both values will be calculated dynamicly depending on 12V battery voltage level)
-int fullDutyCycle12         = 150;   //  60% of 256
-int fullDutyCycle34         = 150;   //  (both values will be calculated dynamicly depending on 12V battery voltage level)
-int steeringRate            = 20;    //    % of DutyCycle
-int steeringDutyCycle12     = 0;     // Calculated dutyCycle
-int steeringDutyCycle34     = 0;     // Calculated dutyCycle
-
 
 // Arrays and variables for alignment algorithm
 float SrL [10] [6] = {{1.0, 0.0, 0.0, 0.0, 0.0, 0.0},   // Left: 0  1   2    3      4      5
@@ -335,11 +395,7 @@ void MotorControl()
 {
   if (emergencyStop || forwardStopCommand) {        // Emergency stop or manually stop
                                                     // *******************************
-    digitalWrite(motor3Direction, digitalRead(motor3Direction) ^ 1); // braking phase
-    digitalWrite(motor1Direction, digitalRead(motor1Direction) ^ 1); // turn opposite direction
-    delay(150);                                                      // ms
-                                                    
-    analogWrite(motor1PWM, stopDutyCycle);                           // immediate stop          
+    analogWrite(motor1PWM, stopDutyCycle);          // immediate stop          
     analogWrite(motor3PWM, stopDutyCycle);
     forwardSlowCommand = false;
     forwardHalfCommand = false;
@@ -352,6 +408,7 @@ void MotorControl()
     turnSlow90RightCommand = false;
     turnSlowLeftToCommand = false;
     turnSlowRightToCommand = false;
+    driveCircleCommand = false;
     forwardStopCommand = true;
     alignCommand = false;
     turnFinished = true;
@@ -363,8 +420,8 @@ void MotorControl()
   if (forwardSlowCommand) {                     // Forward slow manually
     digitalWrite(motor1Direction, forward);     // ************
     digitalWrite(motor3Direction, forward);
-    steeringDutyCycle12 = slowDutyCycle12 + (slowDutyCycle12 * steeringRate / 100);
-    steeringDutyCycle34 = slowDutyCycle34 + (slowDutyCycle34 * steeringRate / 100);
+    turningRadius = turningRadiusMin;
+    setDriveParameters();
     WS = 35.0;
     if (steeringLeftCommand) {
       analogWrite(motor3PWM, slowDutyCycle34);  // Steering Left
@@ -388,8 +445,8 @@ void MotorControl()
   if (backwardSlowCommand) {                     // Backward slow manually
     digitalWrite(motor1Direction, backward);     // ************
     digitalWrite(motor3Direction, backward);
-    steeringDutyCycle12 = slowDutyCycle12 + (slowDutyCycle12 * steeringRate / 100);
-    steeringDutyCycle34 = slowDutyCycle34 + (slowDutyCycle34 * steeringRate / 100);
+    turningRadius = turningRadiusMin;
+    setDriveParameters();
     WS = 35.0;
     if (steeringLeftCommand) {
       analogWrite(motor3PWM, slowDutyCycle34);        // Steering Left
@@ -413,8 +470,8 @@ void MotorControl()
   if (forwardHalfCommand) {                     // Forward half manually
     digitalWrite(motor1Direction, forward);     // ************
     digitalWrite(motor3Direction, forward);
-    steeringDutyCycle12 = halfDutyCycle12 + (halfDutyCycle12 * steeringRate / 100);
-    steeringDutyCycle34 = halfDutyCycle34 + (halfDutyCycle34 * steeringRate / 100);
+    turningRadius = turningRadiusMin;
+    setDriveParameters();
     WS = 35.0;
     if (steeringLeftCommand) {
       analogWrite(motor3PWM, halfDutyCycle34);        // Steering Left
@@ -435,11 +492,22 @@ void MotorControl()
     }
   }
 
+  if (driveCircleCommand) {                     // Drive circle manually
+    digitalWrite(motor1Direction, forward);     // ************
+    digitalWrite(motor3Direction, forward);
+    turningRadius = turningRadiusMin;
+    setDriveParameters();
+    WS = 35.0;
+    analogWrite(motor3PWM, steeringDutyCycle34); // Steering Right
+    analogWrite(motor1PWM, slowDutyCycle12);
+    ServoControl("WSright", WS);
+  }
+
   if (forwardFullCommand) {                     // Forward full manually
     digitalWrite(motor1Direction, forward);     // ************
     digitalWrite(motor3Direction, forward);
-    steeringDutyCycle12 = fullDutyCycle12 + (fullDutyCycle12 * steeringRate / 100);
-    steeringDutyCycle34 = fullDutyCycle34 + (fullDutyCycle34 * steeringRate / 100);
+    turningRadius = turningRadiusMin;
+    setDriveParameters();
     WS = 35.0;
     if (steeringLeftCommand) {
       analogWrite(motor3PWM, fullDutyCycle34);        // Steering Left
@@ -494,7 +562,7 @@ void MotorControl()
     {                                                                                               // Target reached
       digitalWrite(motor3Direction, digitalRead(motor3Direction) ^ 1);                              // braking phase
       digitalWrite(motor1Direction, digitalRead(motor1Direction) ^ 1);                              // turn opposite direction
-      delay(170);                                                                                   // ms
+      delay(breakPulse);                                                                            // ms
         
       analogWrite(motor1PWM, stopDutyCycle);                                                        // immediate stop
       analogWrite(motor3PWM, stopDutyCycle);
@@ -538,7 +606,7 @@ void MotorControl()
      {                                                                                             // Target reached
       digitalWrite(motor3Direction, digitalRead(motor3Direction) ^ 1);                             // braking phase
       digitalWrite(motor1Direction, digitalRead(motor1Direction) ^ 1);                             // turn opposite direction
-      delay(170);                                                                                  // ms
+      delay(breakPulse);                                                                           // ms
         
       analogWrite(motor1PWM, stopDutyCycle);                                                       // immediate stop
       analogWrite(motor3PWM, stopDutyCycle);      
@@ -552,8 +620,6 @@ void MotorControl()
                                                   // used for manually command; turn to absolute angle
 
     if (sequenceCounter90 == 1) {                 // 1------------------------------------------------------------------------
-      steeringDutyCycle12 = slowDutyCycle12 + (slowDutyCycle12 * steeringRate / 100);
-      steeringDutyCycle34 = slowDutyCycle34 + (slowDutyCycle34 * steeringRate / 100);
       beta = 90.0;                                                                                       // Robot deviation from target (degrees)
       turningRadius = turningRadiusMin;                                                                  // turning radius static for beta 90.0 degrees
 
@@ -563,6 +629,7 @@ void MotorControl()
       startAngle = angle16;                       // store start angle for this step
       turnAngleRelative = alpha;                  // relative turn angle for this step
       turnAngle = (angle16 + alpha) % 3600;       // final angle for this step
+      setDriveParameters();
 
       digitalWrite(motor3Direction, backward);    // back left alpha
       digitalWrite(motor1Direction, backward);
@@ -588,6 +655,7 @@ void MotorControl()
       startAngle = angle16;                        // store start angle
       turnAngleRelative = betas;                   // relative turn angle
       turnAngle = (angle16 + betas) % 3600;        // final angle
+      setDriveParameters();
 
       digitalWrite(motor3Direction, forward);      // forward right beta'
       digitalWrite(motor1Direction, forward);
@@ -611,6 +679,7 @@ void MotorControl()
       alpha = (originAngle + 900 - angle16 - allowance) % 3600;// calculated rest angle
       turnAngleRelative = alpha;                   // relative turn angle
       turnAngle = (angle16 + alpha) % 3600;        // final angle
+      setDriveParameters();
 
       digitalWrite(motor3Direction, backward);     // back left alpha
       digitalWrite(motor1Direction, backward);
@@ -648,9 +717,6 @@ void MotorControl()
                                                   // used for manually command; turn left 180 degrees 
                                                   
     if (sequenceCounter90 == 1) {                 // 1
-
-      steeringDutyCycle12 = slowDutyCycle12 + (slowDutyCycle12 * steeringRate / 100);
-      steeringDutyCycle34 = slowDutyCycle34 + (slowDutyCycle34 * steeringRate / 100);
       beta = 90.0;                                                                                       // Robot deviation from target (degrees)
       turningRadius = turningRadiusMin;
 
@@ -660,6 +726,7 @@ void MotorControl()
       startAngle = angle16;                       // store start angle for this step
       turnAngleRelative = alpha;                  // relative turn angle for this step
       turnAngle = (3600 + angle16 - alpha) % 3600;// final angle for this step
+      setDriveParameters();
 
       digitalWrite(motor3Direction, backward);    // back right alpha
       digitalWrite(motor1Direction, backward);
@@ -685,6 +752,7 @@ void MotorControl()
       startAngle = angle16;                        // store start angle
       turnAngleRelative = betas;                   // relative turn angle
       turnAngle = (3600 + angle16 - betas) % 3600; // final angle
+      setDriveParameters();
 
       digitalWrite(motor3Direction, forward);      // forward left beta'
       digitalWrite(motor1Direction, forward);
@@ -708,6 +776,7 @@ void MotorControl()
       alpha = (3600 + angle16 - allowance - (3600 + originAngle - 900)% 3600) % 3600;// calculated rest angle
       turnAngleRelative = alpha;                   // relative turn angle
       turnAngle = (3600 + angle16 - alpha) % 3600;        // final angle
+      setDriveParameters();
 
       digitalWrite(motor3Direction, backward);     // back right alpha
       digitalWrite(motor1Direction, backward);
@@ -743,9 +812,6 @@ void MotorControl()
                                                   // used for turn left 180 degrees; Turn to absolute angle
                                                   
     if (sequenceCounter90 == 1) {                 // 1
-
-      steeringDutyCycle12 = slowDutyCycle12 + (slowDutyCycle12 * steeringRate / 100);
-      steeringDutyCycle34 = slowDutyCycle34 + (slowDutyCycle34 * steeringRate / 100);
       beta = 90.0;                                                                                       // Robot deviation from target (degrees)
       turningRadius = turningRadiusMin;
 
@@ -755,6 +821,7 @@ void MotorControl()
       startAngle = angle16;                       // store start angle for this step
       turnAngleRelative = alpha;                  // relative turn angle for this step
       turnAngle = (3600 + angle16 - alpha) % 3600;// final angle for this step
+      setDriveParameters();
 
       digitalWrite(motor3Direction, forward);     // forward left alpha
       digitalWrite(motor1Direction, forward);
@@ -780,6 +847,7 @@ void MotorControl()
       startAngle = angle16;                        // store start angle
       turnAngleRelative = betas;                   // relative turn angle
       turnAngle = (3600 + angle16 - betas) % 3600; // final angle
+      setDriveParameters();
 
       digitalWrite(motor3Direction, backward);     // backward right beta'
       digitalWrite(motor1Direction, backward);
@@ -803,6 +871,7 @@ void MotorControl()
       alpha = (3600 + angle16 - allowance - (3600 + originAngle - 900)% 3600) % 3600;// calculated rest angle
       turnAngleRelative = alpha;                   // relative turn angle
       turnAngle = (3600 + angle16 - alpha) % 3600; // final angle
+      setDriveParameters();
 
       digitalWrite(motor3Direction, forward);      // forward left alpha
       digitalWrite(motor1Direction, forward);
@@ -866,8 +935,6 @@ void MotorControl()
       turnFinished = false;
       Serial.print("S@Turn finished: ");           // remote status for turn finished to false
       Serial.println(turnFinished);
-      steeringDutyCycle12 = slowDutyCycle12 + (slowDutyCycle12 * steeringRate / 100);
-      steeringDutyCycle34 = slowDutyCycle34 + (slowDutyCycle34 * steeringRate / 100);
 
       startAngle = angle16;                                                         // store start angle
       targetAngle = turnAngle;                                                      // store target angle
@@ -922,19 +989,19 @@ void MotorControl()
       if (turnSlow90RightCommand == false) {
                                                    // Check if 3 or 2 step algorithm is required for turning right
         beta = ((3600 + targetAngle - angle16) % 3600)/10; // robot deviation relative
-        if (beta > 70){                            // RA > 70 degrees; 3step r = 43.2cm
+        if (beta > 65){                            // RA > 65 degrees; 3step r = 43.2cm
           turningRadius = turningRadiusMin;
           WS = 35.0;
           threeStepTurnAngles();                   // calculating alpha, betas        
         
         }
-        if ((beta > 35) && (beta <= 70)){          // RA > 35 <= 70 degrees; 3 step r = 200cm
-          turningRadius = 200;
-          WS = 7.7;
+        if ((beta > 50) && (beta <= 65)){          // RA > 50 <= 65 degrees; 3 step r = 70cm
+          turningRadius = 70;
+          WS = 22.2;
           threeStepTurnAngles();                   // calculating alpha, betas        
         }
 
-        if ((beta > 10) && (beta <= 35)){          // RA > 10 <= 35 degrees; 2 step r calculated     
+        if ((beta > 15) && (beta <= 50)){          // RA > 15 <= 50 degrees; 2 step r calculated     
           alpha = ((180-beta)/2)/2;
           betas =  90-alpha;   
           turningRadiusF = (2*e/cos(betas*PI/180))/(2*sin((beta/4)*PI/180));
@@ -944,7 +1011,7 @@ void MotorControl()
           sequenceCounterTo = 30;                  // continue with 2 step algorithm turning right
         }
 
-        if (beta <= 10){                           // RA      <= 10 degrees; 2 step  r calculated       
+        if (beta <= 15){                           // RA      <= 15 degrees; 2 step  r calculated       
           turningRadiusF = sqrt(AHV*AHV/(2-2*cos((22.3-beta)*PI/180)));
           turningRadiusB = 50;
           betas = 223 - allowance;
@@ -957,6 +1024,7 @@ void MotorControl()
         startAngle = angle16;                      // store start angle
         turnAngleRelative = alpha;                 // relative turn angle
         turnAngle = (angle16 + alpha) % 3600;      // final angle
+        setDriveParameters();
 
         digitalWrite(motor3Direction, backward);   // back left alpha
         digitalWrite(motor1Direction, backward);
@@ -980,6 +1048,7 @@ void MotorControl()
       startAngle = angle16;                        // store start angle
       turnAngleRelative = betas;                   // relative turn angle
       turnAngle = (angle16 + betas) % 3600;        // final angle
+      setDriveParameters();
 
       digitalWrite(motor3Direction, forward);      // forward right beta'
       digitalWrite(motor1Direction, forward);
@@ -1002,6 +1071,7 @@ void MotorControl()
       alpha = (3600 + targetAngle - angle16 - allowance) % 3600;// calculated rest angle
       turnAngleRelative = alpha;                   // relative turn angle
       turnAngle = (angle16 + alpha) % 3600;        // final angle
+      setDriveParameters();
 
       digitalWrite(motor3Direction, backward);     // back left alpha
       digitalWrite(motor1Direction, backward);
@@ -1072,6 +1142,7 @@ void MotorControl()
         startAngle = angle16;                      // store start angle
         turnAngleRelative = alpha;                 // relative turn angle
         turnAngle = (3600 + angle16 - alpha) % 3600; // final angle
+        setDriveParameters();
 
       
         digitalWrite(motor3Direction, backward);   // back right alpha
@@ -1097,6 +1168,7 @@ void MotorControl()
       startAngle = angle16;                        // store start angle
       turnAngleRelative = betas;                   // relative turn angle
       turnAngle = (3600 + angle16 - betas) % 3600; // final angle
+      setDriveParameters();
 
       digitalWrite(motor3Direction, forward);      // forward left beta'
       digitalWrite(motor1Direction, forward);
@@ -1118,6 +1190,7 @@ void MotorControl()
       alpha = (3600 + angle16 - targetAngle - allowance) % 3600;// calculated rest angle
       turnAngleRelative = alpha;                   // relative turn angle
       turnAngle = (3600 + angle16 - alpha) % 3600; // final angle
+      setDriveParameters();
 
       digitalWrite(motor3Direction, backward);     // back right alpha
       digitalWrite(motor1Direction, backward);
@@ -1646,13 +1719,7 @@ void loop()
 
   // Motor control
   // *************************************************************************************************************************************
-  slowDutyCycle12 = int(256*0.2*11.1/battery12VFinalValue);               // Voltage compensation
-  slowDutyCycle34 = int(256*0.2*11.1/battery12VFinalValue);               // Voltage compensation
-  halfDutyCycle12 = int(256*0.4*11.1/battery12VFinalValue);               // Voltage compensation
-  halfDutyCycle34 = int(256*0.4*11.1/battery12VFinalValue);               // Voltage compensation
-  fullDutyCycle12 = int(256*0.6*11.1/battery12VFinalValue);               // Voltage compensation
-  fullDutyCycle34 = int(256*0.6*11.1/battery12VFinalValue);               // Voltage compensation
-  
+
   MotorControl();
   if (forwardStopCommand == true) {
     WS = 0.0;
@@ -1833,6 +1900,7 @@ void loop()
         sequenceCounter90 = 0;
         sequenceCounter180 = 0;
         sequenceCounterTo = 0;
+        sequenceCounterCircle = 0;
         WS = 0.0;
         ServoControl("WSmiddle", WS);
       }
@@ -1842,6 +1910,8 @@ void loop()
         turnSlow180LeftCommand = false;
         turnSlow90LeftBackwardFirstCommand = false; turnSlow90LeftForwardFirstCommand = false; turnSlow90RightCommand = false;
         turnSlowLeftToCommand = false; turnSlowRightToCommand = false;
+        driveCircleCommand = false;
+        
         motorStallLimit = motorStallLimitSlow;
       }
       if (CommandString.startsWith("Forward half")) {
@@ -1849,6 +1919,8 @@ void loop()
         turnSlow180LeftCommand = false;
         turnSlow90LeftBackwardFirstCommand = false; turnSlow90LeftForwardFirstCommand = false; turnSlow90RightCommand = false;
         turnSlowLeftToCommand = false; turnSlowRightToCommand = false;
+        driveCircleCommand = false;
+        
         motorStallLimit = motorStallLimitHalf;
       }
       if (CommandString.startsWith("Forward full")) {
@@ -1856,6 +1928,8 @@ void loop()
         turnSlow180LeftCommand = false;
         turnSlow90LeftBackwardFirstCommand = false; turnSlow90LeftForwardFirstCommand = false; turnSlow90RightCommand = false;
         turnSlowLeftToCommand = false; turnSlowRightToCommand = false;
+        driveCircleCommand = false;
+        
         motorStallLimit = motorStallLimitFull;
       }
       if (CommandString.startsWith("Align")) {
@@ -1888,6 +1962,8 @@ void loop()
         turnSlowRightToCommand = false; turnSlowLeftToCommand = false;
         forwardStopCommand = false; forwardSlowCommand = false; forwardHalfCommand = false; forwardFullCommand = false;
         steeringLeftCommand = false; steeringRightCommand = false; alignCommand = false;
+        driveCircleCommand = false;
+        
         motorStallLimit = motorStallLimitSlow;
         sequenceCounter180 = 1;
       }
@@ -1900,6 +1976,8 @@ void loop()
         turnSlowLeftToCommand = false; turnSlowRightToCommand = false;
         forwardStopCommand = false; forwardSlowCommand = false; forwardHalfCommand = false; forwardFullCommand = false;
         steeringLeftCommand = false; steeringRightCommand = false; alignCommand = false;
+        driveCircleCommand = false;
+        
         motorStallLimit = motorStallLimitSlow;
         sequenceCounter90 = 1;
       }
@@ -1910,6 +1988,8 @@ void loop()
         turnSlowLeftToCommand = false; turnSlowRightToCommand = false;
         forwardStopCommand = false; forwardSlowCommand = false; forwardHalfCommand = false; forwardFullCommand = false;
         steeringLeftCommand = false; steeringRightCommand = false; alignCommand = false;
+        driveCircleCommand = false;
+        
         motorStallLimit = motorStallLimitSlow;
         sequenceCounter90 = 1;
       }
@@ -1922,9 +2002,25 @@ void loop()
         turnSlowLeftToCommand = false; turnSlowRightToCommand = false;
         forwardStopCommand = false; forwardSlowCommand = false; forwardHalfCommand = false; forwardFullCommand = false;
         steeringLeftCommand = false; steeringRightCommand = false; alignCommand = false;
+        driveCircleCommand = false;
 
         motorStallLimit = motorStallLimitSlow;
         sequenceCounterTo = 1;
+      }
+      if (CommandString.startsWith("Carpet ground: ")) {
+        CommandString.replace("Carpet ground: ", "");
+        if (CommandString.toInt() == 1) carpetGround = true;
+        else carpetGround = false;
+      }
+      if (CommandString.startsWith("Drive circle")) {
+        driveCircleCommand = true;
+        
+        forwardStopCommand = false; forwardSlowCommand = false; forwardHalfCommand = false; forwardFullCommand = false;
+        turnSlow180LeftCommand = false;
+        turnSlow90LeftBackwardFirstCommand = false; turnSlow90LeftForwardFirstCommand = false; turnSlow90RightCommand = false;
+        turnSlowLeftToCommand = false; turnSlowRightToCommand = false;
+        motorStallLimit = motorStallLimitSlow;
+        sequenceCounterCircle = 1;
       }
 
       if (CommandString.startsWith("Wlan ready")) wlanReady = true;                   // Live beat of W-LAN communication
@@ -1953,8 +2049,6 @@ void loop()
     Serial.println(alpha);
     Serial.print("I@WS: ");
     Serial.println(int(WS*10));
-
-
   }
   else {
     usbDisturbance = true;                                                        // USB disturbance
